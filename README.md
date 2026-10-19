@@ -1,2 +1,3 @@
 # village-outreach
-Smart Cities mutual aid app--neighbors helping neighbors.
+Smart Cities mutual aid app
+Neighbors helping neighbors.
