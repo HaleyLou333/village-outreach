@@ -1,4 +1,17 @@
 # Miscellaneous
+# Backend environments, credentials, and tooling
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.vs/
+
 *.class
 *.lock
 *.log

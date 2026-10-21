@@ -61,7 +61,7 @@ Village Outreach uses a mobile-first architecture:
 - Entities: User, HelpRequest, Offer, Message, Resource, Report, Organization
 
 ### **Authentication**
-- Firebase Authentication
+- Supabase Auth
 
 ### **Maps Provider**
 - Google Maps
@@ -143,7 +143,7 @@ Flutter SDK
 Python / FastAPI
 PostgreSQL
 Figma (UI/UX)
-Firebase Console
+Supabase Dashboard
 
 ---
 
@@ -151,7 +151,7 @@ Firebase Console
 
 ### **Branch Types**
 - `main` — stable milestone builds  
-- `develop` — integrated development  
+- `dev` — integrated development
 - `feature/<name>` — individual features  
 - `release/<milestone>` — optional stabilization  
 - `hotfix/<name>` — urgent fixes
