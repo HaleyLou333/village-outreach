@@ -13,7 +13,7 @@ htmlcov/
 .vs/
 
 *.class
-*.lock
+# *.lock
 *.log
 *.pyc
 *.swp
