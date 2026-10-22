@@ -1,0 +1,16 @@
+services:
+  database:
+    image: postgres:17.11
+    environment:
+      POSTGRES_USER: vo_test
+      POSTGRES_PASSWORD: local-test-only
+      POSTGRES_DB: village_outreach_test
+    ports:
+      - "127.0.0.1:55439:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vo_test -d village_outreach_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
