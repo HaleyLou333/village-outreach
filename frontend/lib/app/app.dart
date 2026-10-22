@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../core/theme/app_theme.dart';
+import '../features/brand_preview/brand_preview_screen.dart';
 
 class VillageOutreachApp extends StatelessWidget {
   const VillageOutreachApp({super.key});
@@ -10,17 +12,7 @@ class VillageOutreachApp extends StatelessWidget {
       title: 'Village Outreach',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const Scaffold(
-        body: Center(
-          child: Text(
-            'Village Outreach',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
+      home: const BrandPreviewScreen(),
     );
   }
 }

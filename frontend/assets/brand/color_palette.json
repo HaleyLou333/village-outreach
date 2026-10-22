@@ -1,0 +1,18 @@
+{
+  "brand": "Village Outreach",
+  "colors": {
+    "forestGreen": "#4A7C59",
+    "sandBeige": "#F2E9D8",
+    "clayOrange": "#D99A6C",
+    "skyBlue": "#7FB3D5",
+    "softOlive": "#8C9A6E",
+    "charcoal": "#2F2F2F",
+    "offWhite": "#FAF7F2",
+    "warmGray": "#E5E2DD"
+  },
+  "typography": {
+    "headings": "Nunito",
+    "body": "Inter",
+    "branding": "Raleway SemiBold"
+  }
+}
