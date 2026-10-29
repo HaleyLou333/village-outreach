@@ -7,10 +7,9 @@ This README summarizes the project architecture, team roles, development workflo
 ## Team Members & Roles
 | Team Member | Primary Role | Email |
 |-------------|--------------|-------|
-| **Haley Eason** | Project Lead / Full-Stack | haeason@student.fullsail.edu |
+| **Haley Eason** | Project Lead / AI | haeason@student.fullsail.edu |
 | **Matthew Bakken** | Frontend / UI-UX | matt96bakken@gmail.com |
-| **Arianna Miller-Paul** | AI Developer | anmillerpaul@student.fullsail.edu |
-| **Eric Joel Reyes Rivera (Atomic Misfit)** | Backend Developer | Ejreyesrivera@gmail.com |
+| **Eric Joel Reyes Rivera** | Backend Developer | Ejreyesrivera@gmail.com |
 
 ---
 
@@ -203,10 +202,9 @@ The repo separates:
 
 | Decision | Owner |
 |----------|--------|
-| Flutter/Android versions | Matt |
-| Python/FastAPI/PostgreSQL versions | Eric / Haley |
-| Maps provider | Matt / Haley |
-| AI provider/model | Arianna / Haley |
+| Flutter/Android versions/Map provider | Matt |
+| Python/FastAPI/PostgreSQL versions | Eric |
+| AI provider/model | Haley |
 
 ---
 
