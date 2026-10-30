@@ -1,9 +1,9 @@
-# Backend — Sprint 1
+# Village Outreach backend
 
 This backend contains the FastAPI health endpoint, SQLAlchemy User profile,
 PostgreSQL connection/session helpers, Alembic migration, and initial tests.
-Authentication token verification and profile creation are planned in CCVO-6.
-There are no protected profile or request endpoints in this foundation.
+CCVO-6 adds Supabase access-token verification and application-profile provisioning
+as reusable dependencies. Profile and request endpoints follow in their own tickets.
 
 ## Set up Python
 
@@ -83,6 +83,91 @@ the hosted `auth.users` table, so isolated PostgreSQL tests remain independent
 of Supabase Auth. CCVO-6 must verify the access token, derive `supabase_uid` from
 its subject, and create or retrieve exactly one profile using that unique key.
 Client-supplied identities or roles must not determine authorization.
+
+## Authentication contract — CCVO-6
+
+Flutter signs in or creates an email account using Supabase Auth. For a protected
+FastAPI request, send the session's **access token**, not its refresh token or an
+API key:
+
+```http
+Authorization: Bearer <current-session-access-token>
+```
+
+Flutter owns session refresh and retries an expired-token request after refreshing
+the Supabase session. Never log tokens. Database credentials, signing secrets, and
+service-role keys belong only on the server; they are not needed in Flutter.
+
+Set `SUPABASE_URL=https://<project-ref>.supabase.co` in the backend's private `.env`.
+Use the same Supabase project as Flutter. Required server configuration is:
+
+| Variable | Purpose |
+|---|---|
+| `SUPABASE_URL` | HTTPS project origin, without credentials, query, or path |
+| `DATABASE_URL` | Existing server-only PostgreSQL runtime connection |
+
+No JWT secret or service-role key is needed for verification. Haley should confirm
+that Auth uses an asymmetric **ES256 or RS256** signing key. The development
+project's public JWKS endpoint published an ES256 key when checked on October 30,
+2026. Legacy HS256 tokens are rejected; do not change signing keys solely to make
+a client request pass. A project still issuing HS256 requires a separate reviewed
+Auth-server verification path.
+
+The verifier fetches public keys only from the configured origin at
+`/auth/v1/.well-known/jwks.json`. A token cannot supply a different key URL.
+Validation checks the signature against an ES256/RS256 allowlist, the exact issuer
+`<SUPABASE_URL>/auth/v1`, audience `authenticated`, required unexpired `exp`, and
+a UUID `sub`. Optional `iat` and `nbf` claims are validated when present. The
+Supabase `role` must be `authenticated`; anonymous sign-ins and API-key roles
+are rejected. An email claim is required for the current email-account MVP and
+must fit the existing profile constraint. There is no expiration grace period.
+
+JWKS responses are cached for five minutes, without indefinite per-key caching.
+An unknown key ID triggers a key-set refresh. Requests time out after five seconds.
+Supabase also caches JWKS at its edge, so allow its documented propagation period
+when rotating keys. Restarting the backend clears its local key cache. Offline
+JWT verification does not immediately revoke a token after Supabase sign-out or
+user deletion; it can remain valid until expiry. Application `inactive` and
+`suspended` status is checked in the database on each protected request.
+
+Protected routes use the dependency below. This ticket adds no temporary public
+authentication or profile endpoint:
+
+```python
+from typing import Annotated
+from fastapi import Depends
+from app.auth.dependencies import get_current_user
+from app.models import User
+
+# In a protected route signature:
+# user: Annotated[User, Depends(get_current_user)]
+```
+
+The dependency resolves profiles only by the **verified subject**. First access
+creates a `neighbor`/`active` profile. A concurrent first request is handled by the
+unique subject constraint and `ON CONFLICT DO NOTHING`. Provisioning explicitly
+commits before returning; use this dependency before a route starts its own
+write transaction. Existing profile email, display name, role, and status remain
+unchanged. Matching email addresses do not link different subjects. Only the
+optional display name comes from user metadata; it is bounded to 100 trimmed
+characters with `Neighbor` as a fallback. User metadata never assigns privileges.
+
+Errors have stable generic bodies and contain no token, key, or upstream details:
+
+| Status | JSON body | Meaning |
+|---|---|---|
+| 401 | `{"detail":"Invalid or missing access token."}` | Missing, malformed, expired, wrong-project, or otherwise invalid token; includes `WWW-Authenticate: Bearer` |
+| 403 | `{"detail":"Account is not active."}` | Verified user has an inactive/suspended application profile |
+| 503 | `{"detail":"Authentication is temporarily unavailable."}` | Missing backend auth configuration, unreachable public-key service, or unusable upstream key set |
+
+Health and application import remain independent of authentication/database
+configuration. Tests sign tokens with disposable local keys; database tests use
+only the disposable PostgreSQL fixture, including a concurrent provisioning test.
+The hosted project check confirms public-key availability, not a live user login.
+
+References: [Supabase JWT verification](https://supabase.com/docs/guides/auth/jwts),
+[signing keys and rotation](https://supabase.com/docs/guides/auth/signing-keys), and
+[PyJWT verification](https://pyjwt.readthedocs.io/en/stable/usage.html).
 
 ## Alembic migrations — CCVO-28
 
