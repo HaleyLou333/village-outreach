@@ -1,0 +1,20 @@
+{"id":"ex-001","input_text":"I need help getting groceries for my family this week.","expected_category":"FOOD_ASSISTANCE","scenario_tags":["food"]}
+{"id":"ex-002","input_text":"I'm looking for a ride to a doctor's appointment next week.","expected_category":"TRANSPORTATION","scenario_tags":["transportation"]}
+{"id":"ex-003","input_text":"I need someone to watch my child for a few hours after school.","expected_category":"CHILDCARE","scenario_tags":["childcare"]}
+{"id":"ex-004","input_text":"I need help picking up a donated couch for my apartment.","expected_category":"DONATED_ITEMS","scenario_tags":["donated-items"]}
+{"id":"ex-005","input_text":"I need someone to deliver groceries because I cannot leave home today.","expected_category":"DELIVERY_HELP","scenario_tags":["delivery-help"]}
+{"id":"ex-006","input_text":"","expected_category":"NO_SUGGESTION","scenario_tags":["empty"]}
+{"id":"ex-007","input_text":"     ","expected_category":"NO_SUGGESTION","scenario_tags":["whitespace"]}
+{"id":"ex-008","input_text":"I'm having a hard time and could use some help.","expected_category":"NO_SUGGESTION","scenario_tags":["ambiguous"]}
+{"id":"ex-009","input_text":"My name is Jane Example and my phone number is 555-123-4567. I need help getting groceries.","expected_category":"FOOD_ASSISTANCE","scenario_tags":["contains-name","contains-phone","food"]}
+{"id":"ex-010","input_text":"Please contact me at test.user@example.com. I need transportation to work this week.","expected_category":"TRANSPORTATION","scenario_tags":["contains-email","transportation"]}
+{"id":"ex-011","input_text":"I live at 123 Oak Street and need grocery delivery this weekend.","expected_category":"DELIVERY_HELP","scenario_tags":["contains-address","delivery-help"]}
+{"id":"ex-012","input_text":"I need help finding a local food pantry.","expected_category":"FOOD_ASSISTANCE","scenario_tags":["food","resource-search"]}
+{"id":"ex-013","input_text":"My babysitter canceled and I need childcare for tomorrow evening.","expected_category":"CHILDCARE","scenario_tags":["childcare","urgent"]}
+{"id":"ex-014","input_text":"I need a ride to the grocery store because my car is in the shop.","expected_category":"TRANSPORTATION","scenario_tags":["transportation","errands"]}
+{"id":"ex-015","input_text":"A neighbor offered me a free dining table, but I need help moving it.","expected_category":"DONATED_ITEMS","scenario_tags":["donated-items","furniture"]}
+{"id":"ex-016","input_text":"I need help finding community services for utility bill assistance.","expected_category":"LOCAL_SERVICES","scenario_tags":["local-services","utilities"]}
+{"id":"ex-017","input_text":"Are there any organizations nearby that can help with housing resources?","expected_category":"LOCAL_SERVICES","scenario_tags":["local-services","housing"]}
+{"id":"ex-018","input_text":"Can someone bring groceries to my home while I recover from surgery?","expected_category":"DELIVERY_HELP","scenario_tags":["delivery-help","medical-recovery"]}
+{"id":"ex-019","input_text":"I need help locating a nearby shelter and community services.","expected_category":"LOCAL_SERVICES","scenario_tags":["local-services","resource-search"]}
+{"id":"ex-020","input_text":"I'm not sure what help is available, but I need support for my situation.","expected_category":"NO_SUGGESTION","scenario_tags":["ambiguous","general-support"]}
