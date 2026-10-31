@@ -5,6 +5,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.auth.profiles import resolve_user
@@ -53,7 +54,13 @@ def get_current_user(
     identity: Annotated[VerifiedIdentity, Depends(get_verified_identity)],
     session: Annotated[Session, Depends(get_session)],
 ) -> User:
-    user = resolve_user(session, identity)
+    try:
+        user = resolve_user(session, identity)
+    except SQLAlchemyError:
+        session.rollback()
+        raise HTTPException(
+            status_code=503, detail="Profile storage is temporarily unavailable."
+        ) from None
     if user.status != "active":
         raise HTTPException(status_code=403, detail="Account is not active.")
     return user
