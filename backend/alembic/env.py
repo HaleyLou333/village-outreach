@@ -5,7 +5,7 @@ from alembic import context
 from app.core.config import get_settings
 from app.database.base import APP_SCHEMA, Base
 from app.database.session import build_engine, postgres_url
-from app.models import User  # noqa: F401 - register model metadata for autogenerate
+from app.models import HelpRequest, User  # noqa: F401 - register metadata for autogenerate
 
 config = context.config
 
