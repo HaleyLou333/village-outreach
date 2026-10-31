@@ -8,6 +8,9 @@ from sqlalchemy.orm import Session
 
 from app.database.safety import require_test_database
 from app.database.session import build_engine
+from tests.auth_helpers import claims as claims
+from tests.auth_helpers import signing_key as signing_key
+from tests.auth_helpers import verifier as verifier
 
 BACKEND = Path(__file__).resolve().parents[1]
 
