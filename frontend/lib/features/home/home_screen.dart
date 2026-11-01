@@ -1,4 +1,7 @@
+
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../profile/profile_screen.dart';
 
 import '../../core/theme/app_colors.dart';
 
@@ -32,6 +35,32 @@ class HomeScreen extends StatelessWidget {
     ),
   ];
 
+  Future<void> _signOut(BuildContext context) async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+
+      // AuthGate in app.dart automatically redirects to SignInScreen.
+    } on AuthException catch (error) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to sign out: ${error.message}'),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Something went wrong while signing out. Please try again.',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -64,6 +93,13 @@ class HomeScreen extends StatelessWidget {
             tooltip: 'Notifications - coming soon',
             onPressed: null,
             icon: const Icon(Icons.notifications_outlined),
+          ),
+
+          // CCVO-64: Sign out of the current Supabase session.
+          IconButton(
+            tooltip: 'Sign Out',
+            icon: const Icon(Icons.logout_outlined),
+            onPressed: () => _signOut(context),
           ),
         ],
       ),
@@ -134,8 +170,14 @@ class HomeScreen extends StatelessWidget {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: 0,
-        onDestinationSelected: (_) {
-          // Navigation will be implemented in a future ticket.
+        onDestinationSelected: (index) {
+          if (index == 4) {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+              builder: (context) => const ProfileScreen(),
+              ),
+            );
+          }
         },
         destinations: const [
           NavigationDestination(
@@ -246,19 +288,27 @@ class _RequestCard extends StatelessWidget {
                     color: AppColors.sandBeige,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(request.icon, color: AppColors.forestGreen),
+                  child: Icon(
+                    request.icon,
+                    color: AppColors.forestGreen,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     request.title,
-                    style: textTheme.titleLarge?.copyWith(fontSize: 18),
+                    style: textTheme.titleLarge?.copyWith(
+                      fontSize: 18,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            Text(request.description, style: textTheme.bodyMedium),
+            Text(
+              request.description,
+              style: textTheme.bodyMedium,
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -284,14 +334,19 @@ class _InfoChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 6,
+      ),
       decoration: BoxDecoration(
         color: AppColors.sandBeige,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         label,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          fontSize: 12,
+        ),
       ),
     );
   }
