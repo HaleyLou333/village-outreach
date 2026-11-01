@@ -1,0 +1,20 @@
+{"id": "ex-001", "normalized_text": "I need help getting groceries for my family this week.", "category": "FOOD_ASSISTANCE", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-002", "normalized_text": "I'm looking for a ride to a doctor's appointment next week.", "category": "TRANSPORTATION", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-003", "normalized_text": "I need someone to watch my child for a few hours after school.", "category": "CHILDCARE", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-004", "normalized_text": "I need help picking up a donated couch for my apartment.", "category": "DONATED_ITEMS", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-005", "normalized_text": "I need someone to deliver groceries because I cannot leave home today.", "category": "FOOD_ASSISTANCE", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-006", "normalized_text": "", "category": "NO_SUGGESTION", "result_source": "mock", "confidence": 0.0}
+{"id": "ex-007", "normalized_text": "", "category": "NO_SUGGESTION", "result_source": "mock", "confidence": 0.0}
+{"id": "ex-008", "normalized_text": "I'm having a hard time and could use some help.", "category": "NO_SUGGESTION", "result_source": "mock", "confidence": 0.0}
+{"id": "ex-009", "normalized_text": "My name is Jane Example and my phone number is 555-123-4567. I need help getting groceries.", "category": "FOOD_ASSISTANCE", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-010", "normalized_text": "Please contact me at test.user@example.com. I need transportation to work this week.", "category": "TRANSPORTATION", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-011", "normalized_text": "I live at 123 Oak Street and need grocery delivery this weekend.", "category": "FOOD_ASSISTANCE", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-012", "normalized_text": "I need help finding a local food pantry.", "category": "FOOD_ASSISTANCE", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-013", "normalized_text": "My babysitter canceled and I need childcare for tomorrow evening.", "category": "CHILDCARE", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-014", "normalized_text": "I need a ride to the grocery store because my car is in the shop.", "category": "FOOD_ASSISTANCE", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-015", "normalized_text": "A neighbor offered me a free dining table, but I need help moving it.", "category": "DONATED_ITEMS", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-016", "normalized_text": "I need help finding community services for utility bill assistance.", "category": "LOCAL_SERVICES", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-017", "normalized_text": "Are there any organizations nearby that can help with housing resources?", "category": "LOCAL_SERVICES", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-018", "normalized_text": "Can someone bring groceries to my home while I recover from surgery?", "category": "FOOD_ASSISTANCE", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-019", "normalized_text": "I need help locating a nearby shelter and community services.", "category": "LOCAL_SERVICES", "result_source": "mock", "confidence": 0.95}
+{"id": "ex-020", "normalized_text": "I'm not sure what help is available, but I need support for my situation.", "category": "NO_SUGGESTION", "result_source": "mock", "confidence": 0.0}
