@@ -59,7 +59,7 @@ def session_scope(factory: sessionmaker[Session]) -> Iterator[Session]:
 
 
 def get_session() -> Iterator[Session]:
-    """FastAPI dependency for future routes; identity checks belong to CCVO-6."""
+    """Provide a session; route dependencies verify identity and callers commit writes."""
     factory = sessionmaker(get_engine(), expire_on_commit=False)
     with session_scope(factory) as session:
         yield session
