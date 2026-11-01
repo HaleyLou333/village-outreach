@@ -49,6 +49,21 @@ Supported Categories:
 - LOCAL_SERVICES
 - NO_SUGGESTION
 
+## Classification Limitations
+
+Classification results should be treated as suggestions rather than guaranteed outcomes.
+
+Known limitations include:
+
+- User requests may be ambiguous or incomplete.
+- Short text submissions may provide insufficient context.
+- Confidence scores do not guarantee correctness.
+- Identical requests may be categorized differently by future providers.
+- Human review may still be required for edge cases.
+
+The AI classifier is intended to assist categorization and should not be considered a final authority.
+
+
 ## Smoke Test
 
 Run:
@@ -63,6 +78,26 @@ Expected Result:
 Smoke test passed
 ClassificationResult(category='NO_SUGGESTION', result_source='mock', confidence=0.0)
 ```
+
+## Mock Classifier
+
+Current development uses a mock classifier implementation.
+
+Purpose:
+
+- Supports local development without cloud dependencies.
+- Produces predictable test results.
+- Enables automated testing and CI workflows.
+- Avoids provider usage costs during development.
+
+Example Result:
+
+```python
+ClassificationResult(
+    category="NO_SUGGESTION",
+    result_source="mock",
+    confidence=0.0
+)
 
 ## Future Provider Integration
 
