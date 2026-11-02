@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../profile/profile_screen.dart';
 import '../requests/models/help_request.dart';
 import '../requests/screens/request_detail_screen.dart';
+import '../requests/screens/request_form_screen.dart';
 import '../requests/services/request_service.dart';
 import '../requests/widgets/request_card.dart';
 
@@ -49,6 +50,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadRequests();
   }
 
+  /// Loads the first page of nearby requests.
+  ///
+  /// Also used for pull-to-refresh and after request creation.
   Future<void> _loadRequests() async {
     setState(() {
       _loading = true;
@@ -84,6 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Loads additional nearby requests.
   Future<void> _loadMore() async {
     if (_loading || _loadingMore || !_hasMore) return;
 
@@ -120,6 +125,32 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// CCVO-66: Opens the request creation form.
+  ///
+  /// Refreshes the nearby feed after a successful submission.
+  Future<void> _openCreateRequest() async {
+    final created = await Navigator.of(context).push<HelpRequest>(
+      MaterialPageRoute<HelpRequest>(
+        builder: (_) => RequestFormScreen(requestRepository: _requestService),
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (created != null) {
+      await _loadRequests();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your help request was submitted successfully.'),
+        ),
+      );
+    }
+  }
+
+  /// Opens request details and refreshes the feed on return.
   Future<void> _openRequest(HelpRequest request) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -135,9 +166,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // TEMPORARY DEBUG FEATURE:
-  // Copies the current user's Supabase JWT to the clipboard.
-  // Remove this method and the AppBar button after testing.
+  /// TEMPORARY DEBUG FEATURE:
+  /// Copies the current Supabase JWT to the clipboard.
+  ///
+  /// Only available in debug builds.
+  /// Remove before production release.
   Future<void> _copyDebugJwt() async {
     if (!kDebugMode) return;
 
@@ -174,6 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Signs out the authenticated user.
   Future<void> _signOut(BuildContext context) async {
     try {
       await Supabase.instance.client.auth.signOut();
@@ -208,6 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  /// Builds the nearby request feed.
   Widget _buildRequestFeed() {
     if (_loading) {
       return const Center(
@@ -306,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
-          // TEMPORARY: Visible only in debug builds.
+          // Temporary development-only JWT testing button.
           if (kDebugMode)
             IconButton(
               tooltip: 'Copy JWT for API testing',
@@ -319,6 +354,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: null,
             icon: const Icon(Icons.notifications_outlined),
           ),
+
           IconButton(
             tooltip: 'Sign Out',
             icon: const Icon(Icons.logout_outlined),
@@ -345,7 +381,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 24),
 
-              const Row(
+              // CCVO-66: Request Help is now interactive.
+              Row(
                 children: [
                   Expanded(
                     child: _ActionCard(
@@ -353,10 +390,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: Icons.volunteer_activism_outlined,
                       background: AppColors.forestGreen,
                       foreground: AppColors.white,
+                      onTap: _openCreateRequest,
                     ),
                   ),
-                  SizedBox(width: 12),
-                  Expanded(
+                  const SizedBox(width: 12),
+                  const Expanded(
                     child: _ActionCard(
                       label: 'Offer Help',
                       icon: Icons.handshake_outlined,
@@ -368,8 +406,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
 
               const SizedBox(height: 28),
+
               Text('Nearby Requests', style: textTheme.titleLarge),
               const SizedBox(height: 8),
+
               Text(
                 'Live requests from your community',
                 style: textTheme.bodyMedium,
@@ -386,6 +426,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
 
               const SizedBox(height: 16),
+
               _buildRequestFeed(),
             ],
           ),
@@ -431,40 +472,47 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+/// Reusable Home screen action card.
 class _ActionCard extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color background;
   final Color foreground;
+  final VoidCallback? onTap;
 
   const _ActionCard({
     required this.label,
     required this.icon,
     required this.background,
     required this.foreground,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 104),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: foreground, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.labelLarge
-                ?.copyWith(color: foreground),
-          ),
-        ],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 104),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: foreground, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelLarge
+                  ?.copyWith(color: foreground),
+            ),
+          ],
+        ),
       ),
     );
   }
