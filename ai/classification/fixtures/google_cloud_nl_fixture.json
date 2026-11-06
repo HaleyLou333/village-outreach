@@ -1,0 +1,27 @@
+[
+  {
+    "provider_category": "Food & Drink",
+    "confidence": 0.92,
+    "mapped_category": "FOOD_ASSISTANCE"
+  },
+  {
+    "provider_category": "Law & Government / Social Services",
+    "confidence": 0.89,
+    "mapped_category": "COMMUNITY_SUPPORT"
+  },
+  {
+    "provider_category": "Health",
+    "confidence": 0.85,
+    "mapped_category": "HEALTH_SUPPORT"
+  },
+  {
+    "provider_category": "Shopping",
+    "confidence": 0.78,
+    "mapped_category": "RESOURCE_REQUEST"
+  },
+  {
+    "provider_category": "Unknown Category",
+    "confidence": 0.12,
+    "mapped_category": "NO_SUGGESTION"
+  }
+]
