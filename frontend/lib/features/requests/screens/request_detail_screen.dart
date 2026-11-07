@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../profile/profile_service.dart';
+import '../../offers/screens/request_offers_screen.dart';
+import '../../offers/services/offer_service.dart';
 import '../models/help_request.dart';
 import '../services/request_service.dart';
 import 'request_form_screen.dart';
@@ -15,6 +17,7 @@ class RequestDetailScreen extends StatefulWidget {
   // Optional dependencies for automated testing.
   final RequestRepository? requestRepository;
   final ProfileService? profileService;
+  final OfferRepository? offerRepository;
 
   const RequestDetailScreen({
     super.key,
@@ -22,11 +25,15 @@ class RequestDetailScreen extends StatefulWidget {
     this.distanceKm,
     this.requestRepository,
     this.profileService,
+    this.offerRepository,
   });
 
   @override
   State<RequestDetailScreen> createState() => _RequestDetailScreenState();
 }
+
+// Shared only for development demos. Real offers require the backend API.
+final MockOfferRepository _developmentOfferRepository = MockOfferRepository();
 
 class _RequestDetailScreenState extends State<RequestDetailScreen> {
   late final RequestRepository _repository;
@@ -197,6 +204,32 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         _error = error.toString().replaceFirst('Exception: ', '');
       });
     }
+  }
+
+  Future<void> _openOffers() async {
+    final request = _request;
+    final currentUserId = _applicationUserId;
+    if (!kDebugMode ||
+        request == null ||
+        !request.isActive ||
+        currentUserId == null ||
+        _loadingProfile ||
+        _updating) {
+      return;
+    }
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => RequestOffersScreen(
+          requestId: request.id,
+          requestOwnerId: request.requesterId,
+          currentUserId: currentUserId,
+          repository: widget.offerRepository ?? _developmentOfferRepository,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _loadRequest();
   }
 
   /// Opens the request form with the existing request information.
@@ -453,6 +486,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         await Future.wait([_loadProfile(), _loadRequest()]);
       },
       child: ListView(
+        // Reset the scrollable when the request changes status.
+        // Owner controls disappear on completion/cancellation, which can
+        // otherwise cause viewport offset correction loops in widget tests.
+        key: ValueKey('request-details-${request.id}-${request.status}'),
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
         children: [
@@ -499,6 +536,35 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             const Text(
               'This request is closed and is no longer '
               'accepting help.',
+            ),
+          ],
+
+          // Mock offers are only accessible in debug builds.
+          // Never present locally stored demo offers as real submissions.
+          if (kDebugMode &&
+              request.isActive &&
+              _applicationUserId != null &&
+              !_loadingProfile &&
+              _profileError == null) ...[
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 12),
+            Text('Helper Offers (Demo)', style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            const Text(
+              'Development preview only. Offers are stored in memory '
+              'and are not sent to the server.',
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              key: const Key('open-offers-demo'),
+              onPressed: _updating ? null : _openOffers,
+              icon: Icon(
+                isOwner ? Icons.people_outline : Icons.volunteer_activism,
+              ),
+              label: Text(
+                isOwner ? 'Review Offers (Demo)' : 'Offer to Help (Demo)',
+              ),
             ),
           ],
 

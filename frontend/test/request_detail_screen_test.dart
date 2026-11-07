@@ -408,4 +408,62 @@ void main() {
       expect(repository.request.status, 'active');
     });
   });
+
+  group('CCVO-61 Offer Navigation (Debug Demo)', () {
+    testWidgets('Owner can open Review Offers demo', (tester) async {
+      final repository = FakeRequestRepository(makeRequest());
+      await openDetails(
+        tester,
+        repository: repository,
+        applicationUserId: ownerId,
+      );
+
+      await scrollToText(tester, 'Review Offers (Demo)');
+      expect(find.text('Review Offers (Demo)'), findsOneWidget);
+      expect(find.text('Offer to Help (Demo)'), findsNothing);
+
+      await tester.tap(find.text('Review Offers (Demo)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Incoming Offers'), findsWidgets);
+      expect(find.text('Submit Offer'), findsNothing);
+      expect(repository.updateCalls, 0);
+    });
+
+    testWidgets('Nonowner can open Offer to Help demo', (tester) async {
+      final repository = FakeRequestRepository(makeRequest());
+      await openDetails(
+        tester,
+        repository: repository,
+        applicationUserId: otherUserId,
+      );
+
+      await scrollToText(tester, 'Offer to Help (Demo)');
+      expect(find.text('Offer to Help (Demo)'), findsOneWidget);
+      expect(find.text('Review Offers (Demo)'), findsNothing);
+
+      await tester.tap(find.text('Offer to Help (Demo)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Submit Offer'), findsOneWidget);
+      expect(find.text('Accept Offer'), findsNothing);
+      expect(repository.updateCalls, 0);
+    });
+
+    testWidgets('Closed requests hide offer navigation', (tester) async {
+      for (final status in ['completed', 'canceled']) {
+        final repository = FakeRequestRepository(makeRequest(status: status));
+        await openDetails(
+          tester,
+          repository: repository,
+          applicationUserId: ownerId,
+        );
+
+        expect(find.byKey(const Key('open-offers-demo')), findsNothing);
+        expect(find.text('Review Offers (Demo)'), findsNothing);
+        expect(find.text('Offer to Help (Demo)'), findsNothing);
+        expect(repository.updateCalls, 0);
+      }
+    });
+  });
 }
