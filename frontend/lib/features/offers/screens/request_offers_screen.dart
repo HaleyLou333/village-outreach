@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../messaging/screens/private_conversation_screen.dart';
+import '../../messaging/services/message_service.dart';
+
 import '../models/help_offer.dart';
 import '../services/offer_service.dart';
 
@@ -10,12 +13,16 @@ class RequestOffersScreen extends StatefulWidget {
     required this.requestOwnerId,
     required this.currentUserId,
     required this.repository,
+    this.messageRepository,
+    this.isClosed = false,
   });
 
   final String requestId;
   final String requestOwnerId;
   final String currentUserId;
   final OfferRepository repository;
+  final MessageRepository? messageRepository;
+  final bool isClosed;
 
   @override
   State<RequestOffersScreen> createState() => _RequestOffersScreenState();
@@ -80,7 +87,7 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
   }
 
   Future<void> _submitOffer() async {
-    if (_busy) return;
+    if (_busy || widget.isClosed) return;
 
     setState(() {
       _busy = true;
@@ -106,7 +113,7 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
   }
 
   Future<void> _acceptOffer(HelpOffer offer) async {
-    if (_busy) return;
+    if (_busy || widget.isClosed) return;
 
     setState(() {
       _busy = true;
@@ -135,6 +142,39 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _openConversation(HelpOffer offer) async {
+    if (offer.status != OfferStatus.accepted) return;
+
+    final repository = widget.messageRepository;
+    if (repository == null) return;
+
+    if (widget.currentUserId != widget.requestOwnerId &&
+        widget.currentUserId != offer.helperId) {
+      return;
+    }
+
+    if (repository is MockMessageRepository) {
+      repository.configureConversation(
+        requestId: widget.requestId,
+        requesterId: widget.requestOwnerId,
+        acceptedHelperId: offer.helperId,
+        isClosed: widget.isClosed,
+      );
+    }
+
+    if (!mounted) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => PrivateConversationScreen(
+          requestId: widget.requestId,
+          currentUserId: widget.currentUserId,
+          repository: repository,
+          isClosed: widget.isClosed,
+        ),
+      ),
+    );
   }
 
   String _statusLabel(OfferStatus status) {
@@ -189,6 +229,10 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
   Widget _buildHelperView() {
     final offer = _myOffer;
 
+    if (widget.isClosed && offer == null) {
+      return const Text('This request is closed. New offers are unavailable.');
+    }
+
     if (offer != null) {
       return Card(
         child: Padding(
@@ -204,13 +248,24 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
               Text('Status: ${_statusLabel(offer.status)}'),
               const SizedBox(height: 12),
               Text(offer.message),
+              if (widget.isClosed) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'This request is closed. Conversation history is read-only.',
+                ),
+              ],
               if (offer.status == OfferStatus.accepted) ...[
                 const SizedBox(height: 16),
-                const Text(
-                  'Your offer was accepted. '
-                  'Private messaging will be available '
-                  'after API integration.',
-                ),
+                const Text('Your offer was accepted!'),
+                if (widget.messageRepository != null) ...[
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    key: const Key('open-helper-conversation'),
+                    onPressed: () => _openConversation(offer),
+                    icon: const Icon(Icons.chat_bubble_outline),
+                    label: const Text('Open Conversation (Demo)'),
+                  ),
+                ],
               ],
             ],
           ),
@@ -260,6 +315,12 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (widget.isClosed) ...[
+          const Text(
+            'This request is closed. Existing conversations are read-only.',
+          ),
+          const SizedBox(height: 12),
+        ],
         const Text(
           'Incoming Offers',
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -280,7 +341,19 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
                   Text(offer.message),
                   const SizedBox(height: 8),
                   Text('Status: ${_statusLabel(offer.status)}'),
-                  if (offer.status == OfferStatus.pending && !hasAccepted) ...[
+                  if (offer.status == OfferStatus.accepted &&
+                      widget.messageRepository != null) ...[
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      key: Key('open-owner-conversation-${offer.id}'),
+                      onPressed: () => _openConversation(offer),
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      label: const Text('Open Conversation (Demo)'),
+                    ),
+                  ],
+                  if (offer.status == OfferStatus.pending &&
+                      !hasAccepted &&
+                      !widget.isClosed) ...[
                     const SizedBox(height: 12),
                     FilledButton(
                       key: Key('accept-${offer.id}'),

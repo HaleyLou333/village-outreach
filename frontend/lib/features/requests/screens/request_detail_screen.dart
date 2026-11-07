@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../profile/profile_service.dart';
 import '../../offers/screens/request_offers_screen.dart';
 import '../../offers/services/offer_service.dart';
+import '../../messaging/services/message_service.dart';
 import '../models/help_request.dart';
 import '../services/request_service.dart';
 import 'request_form_screen.dart';
@@ -18,6 +19,7 @@ class RequestDetailScreen extends StatefulWidget {
   final RequestRepository? requestRepository;
   final ProfileService? profileService;
   final OfferRepository? offerRepository;
+  final MessageRepository? messageRepository;
 
   const RequestDetailScreen({
     super.key,
@@ -26,6 +28,7 @@ class RequestDetailScreen extends StatefulWidget {
     this.requestRepository,
     this.profileService,
     this.offerRepository,
+    this.messageRepository,
   });
 
   @override
@@ -34,6 +37,9 @@ class RequestDetailScreen extends StatefulWidget {
 
 // Shared only for development demos. Real offers require the backend API.
 final MockOfferRepository _developmentOfferRepository = MockOfferRepository();
+// Demo-only, shared between visits; never used as a production message store.
+final MockMessageRepository _developmentMessageRepository =
+    MockMessageRepository();
 
 class _RequestDetailScreenState extends State<RequestDetailScreen> {
   late final RequestRepository _repository;
@@ -211,7 +217,6 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     final currentUserId = _applicationUserId;
     if (!kDebugMode ||
         request == null ||
-        !request.isActive ||
         currentUserId == null ||
         _loadingProfile ||
         _updating) {
@@ -225,6 +230,9 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           requestOwnerId: request.requesterId,
           currentUserId: currentUserId,
           repository: widget.offerRepository ?? _developmentOfferRepository,
+          messageRepository:
+              widget.messageRepository ?? _developmentMessageRepository,
+          isClosed: request.isClosed,
         ),
       ),
     );
@@ -542,7 +550,6 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           // Mock offers are only accessible in debug builds.
           // Never present locally stored demo offers as real submissions.
           if (kDebugMode &&
-              request.isActive &&
               _applicationUserId != null &&
               !_loadingProfile &&
               _profileError == null) ...[
@@ -563,7 +570,13 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                 isOwner ? Icons.people_outline : Icons.volunteer_activism,
               ),
               label: Text(
-                isOwner ? 'Review Offers (Demo)' : 'Offer to Help (Demo)',
+                request.isClosed
+                    ? (isOwner
+                          ? 'Review Offers & Messages (Demo)'
+                          : 'View Offer & Messages (Demo)')
+                    : (isOwner
+                          ? 'Review Offers (Demo)'
+                          : 'Offer to Help (Demo)'),
               ),
             ),
           ],
