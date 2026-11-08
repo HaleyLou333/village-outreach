@@ -7,6 +7,9 @@ import 'package:village_outreach/features/requests/services/request_service.dart
 /// Fake repository used to isolate HomeScreen widget tests
 /// from the real FastAPI backend and Supabase authentication.
 class FakeRequestRepository implements RequestRepository {
+  final List<HelpRequest> requests = [];
+  final List<double> searchedLongitudes = [];
+
   @override
   Future<List<HelpRequest>> getNearbyRequests({
     required double latitude,
@@ -15,7 +18,10 @@ class FakeRequestRepository implements RequestRepository {
     int limit = 20,
     int offset = 0,
   }) async {
-    return [];
+    searchedLongitudes.add(longitude);
+    return requests
+        .where((request) => request.longitude == longitude && request.isActive)
+        .toList();
   }
 
   @override
@@ -31,9 +37,16 @@ class FakeRequestRepository implements RequestRepository {
     required Map<String, dynamic> data,
     required String idempotencyKey,
   }) async {
-    throw UnimplementedError(
-      'Request creation is not exercised by these tests.',
-    );
+    final request = HelpRequest.fromJson({
+      ...data,
+      'id': 'created-request',
+      'requester_id': 'requester',
+      'status': 'active',
+      'created_at': '2026-11-08T12:00:00Z',
+      'updated_at': '2026-11-08T12:00:00Z',
+    });
+    requests.add(request);
+    return request;
   }
 
   /// CCVO-66: Required by the updated RequestRepository interface.
@@ -49,6 +62,53 @@ class FakeRequestRepository implements RequestRepository {
 }
 
 void main() {
+  testWidgets(
+    'Posting in Mesa switches Nearby to Mesa and refresh removes a closed request',
+    (tester) async {
+      tester.view.physicalSize = const Size(414, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final repository = FakeRequestRepository();
+      await tester.pumpWidget(
+        MaterialApp(home: HomeScreen(requestRepository: repository)),
+      );
+      await tester.pumpAndSettle();
+      expect(repository.searchedLongitudes.single, -112.0740);
+
+      await tester.tap(find.text('Request Help'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextFormField).at(0),
+        'Mesa grocery pickup',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'Please pick up groceries.',
+      );
+      await tester.tap(find.text('Category'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Food Assistance').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Area'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Downtown Mesa').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Submit Request'));
+      await tester.pumpAndSettle();
+
+      expect(repository.searchedLongitudes.last, -111.8315);
+      expect(find.text('Mesa grocery pickup'), findsOneWidget);
+
+      // The next server response no longer includes a request closed elsewhere.
+      repository.requests.clear();
+      await tester.tap(find.byTooltip('Refresh nearby requests'));
+      await tester.pumpAndSettle();
+      expect(repository.searchedLongitudes.last, -111.8315);
+      expect(find.text('Mesa grocery pickup'), findsNothing);
+    },
+  );
+
   Future<void> loadHomeScreen(WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(home: HomeScreen(requestRepository: FakeRequestRepository())),

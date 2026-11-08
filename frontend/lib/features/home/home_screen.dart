@@ -22,10 +22,8 @@ class _HomeScreenState extends State<HomeScreen> {
   static const int _pageSize = 20;
   final _nearbySection = GlobalKey();
 
-  // Temporary development coordinates.
-  // These do not represent the user's actual location.
-  static const double _latitude = 33.4484;
-  static const double _longitude = -112.0740;
+  RequestArea _searchArea = requestAreas.first;
+  int _feedGeneration = 0;
 
   late final RequestRepository _requestService;
   late final bool _ownsService;
@@ -52,22 +50,26 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Loads the first page of nearby requests.
   ///
   /// Also used for pull-to-refresh and after request creation.
-  Future<void> _loadRequests() async {
+  Future<void> _loadRequests({RequestArea? area}) async {
+    final generation = ++_feedGeneration;
+    final searchArea = area ?? _searchArea;
     setState(() {
+      _searchArea = searchArea;
       _loading = true;
+      _loadingMore = false;
       _error = null;
       _loadMoreError = null;
     });
 
     try {
       final results = await _requestService.getNearbyRequests(
-        latitude: _latitude,
-        longitude: _longitude,
+        latitude: searchArea.latitude,
+        longitude: searchArea.longitude,
         limit: _pageSize,
         offset: 0,
       );
 
-      if (!mounted) return;
+      if (!mounted || generation != _feedGeneration) return;
 
       setState(() {
         _requests
@@ -78,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _loading = false;
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || generation != _feedGeneration) return;
 
       setState(() {
         _loading = false;
@@ -90,6 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Loads additional nearby requests.
   Future<void> _loadMore() async {
     if (_loading || _loadingMore || !_hasMore) return;
+    final generation = _feedGeneration;
 
     setState(() {
       _loadingMore = true;
@@ -98,13 +101,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final results = await _requestService.getNearbyRequests(
-        latitude: _latitude,
-        longitude: _longitude,
+        latitude: _searchArea.latitude,
+        longitude: _searchArea.longitude,
         limit: _pageSize,
         offset: _requests.length,
       );
 
-      if (!mounted) return;
+      if (!mounted || generation != _feedGeneration) return;
 
       setState(() {
         final existingIds = _requests.map((r) => r.id).toSet();
@@ -115,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _loadingMore = false;
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || generation != _feedGeneration) return;
 
       setState(() {
         _loadingMore = false;
@@ -137,7 +140,10 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
 
     if (created != null) {
-      await _loadRequests();
+      final area = requestAreas
+          .where((area) => area.name == created.area)
+          .firstOrNull;
+      await _loadRequests(area: area);
 
       if (!mounted) return;
 
@@ -366,16 +372,47 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 28),
 
-              Text(
-                'Nearby Requests',
+              Row(
                 key: _nearbySection,
-                style: textTheme.titleLarge,
+                children: [
+                  Expanded(
+                    child: Text('Nearby Requests', style: textTheme.titleLarge),
+                  ),
+                  IconButton(
+                    tooltip: 'Refresh nearby requests',
+                    onPressed: _loading ? null : _loadRequests,
+                    icon: const Icon(Icons.refresh),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
 
               Text(
                 'Live requests from your community',
                 style: textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 12),
+              InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Search area',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<RequestArea>(
+                    value: _searchArea,
+                    isExpanded: true,
+                    items: [
+                      for (final area in requestAreas)
+                        DropdownMenuItem(value: area, child: Text(area.name)),
+                    ],
+                    onChanged: (area) {
+                      if (area != null && area != _searchArea) {
+                        _loadRequests(area: area);
+                      }
+                    },
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
 
