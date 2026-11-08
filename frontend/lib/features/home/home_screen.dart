@@ -1,6 +1,4 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -22,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   static const int _pageSize = 20;
+  final _nearbySection = GlobalKey();
 
   // Temporary development coordinates.
   // These do not represent the user's actual location.
@@ -166,47 +165,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// TEMPORARY DEBUG FEATURE:
-  /// Copies the current Supabase JWT to the clipboard.
-  ///
-  /// Only available in debug builds.
-  /// Remove before production release.
-  Future<void> _copyDebugJwt() async {
-    if (!kDebugMode) return;
-
-    final session = Supabase.instance.client.auth.currentSession;
-
-    if (session == null || session.accessToken.isEmpty) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No active Supabase session. Please sign in first.'),
-        ),
-      );
-      return;
-    }
-
-    try {
-      await Clipboard.setData(ClipboardData(text: session.accessToken));
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Development access token copied to clipboard.'),
-          duration: Duration(seconds: 3),
-        ),
-      );
-    } catch (_) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to copy access token.')),
-      );
-    }
-  }
-
   /// Signs out the authenticated user.
   Future<void> _signOut(BuildContext context) async {
     try {
@@ -341,14 +299,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
-          // Temporary development-only JWT testing button.
-          if (kDebugMode)
-            IconButton(
-              tooltip: 'Copy JWT for API testing',
-              icon: const Icon(Icons.key_outlined),
-              onPressed: _copyDebugJwt,
-            ),
-
           IconButton(
             tooltip: 'Notifications - coming soon',
             onPressed: null,
@@ -394,12 +344,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: _ActionCard(
                       label: 'Offer Help',
                       icon: Icons.handshake_outlined,
                       background: AppColors.sandBeige,
                       foreground: AppColors.charcoal,
+                      onTap: () {
+                        final section = _nearbySection.currentContext;
+                        if (section != null) {
+                          Scrollable.ensureVisible(
+                            section,
+                            duration: const Duration(milliseconds: 250),
+                          );
+                        }
+                      },
                     ),
                   ),
                 ],
@@ -407,7 +366,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 28),
 
-              Text('Nearby Requests', style: textTheme.titleLarge),
+              Text(
+                'Nearby Requests',
+                key: _nearbySection,
+                style: textTheme.titleLarge,
+              ),
               const SizedBox(height: 8),
 
               Text(

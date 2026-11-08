@@ -4,6 +4,35 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:village_outreach/features/messaging/screens/private_conversation_screen.dart';
 import 'package:village_outreach/features/messaging/services/message_service.dart';
 
+class ForwardMessageRepository extends MockMessageRepository {
+  bool denyNextPage = false;
+
+  @override
+  Future<MessagePage> getMessages({
+    required String requestId,
+    required String currentUserId,
+    String? cursor,
+    int limit = 20,
+  }) async {
+    if (denyNextPage) {
+      throw const MessageException('Access denied', statusCode: 403);
+    }
+    final all = (await super.getMessages(
+      requestId: requestId,
+      currentUserId: currentUserId,
+      limit: 100,
+    )).messages;
+    final offset = int.tryParse(cursor ?? '') ?? 0;
+    final messages = all.skip(offset).take(limit).toList();
+    final end = offset + messages.length;
+    return MessagePage(
+      messages: messages,
+      nextCursor: end < all.length ? '$end' : null,
+      refreshCursor: '$end',
+    );
+  }
+}
+
 void main() {
   late MockMessageRepository repository;
 
@@ -91,4 +120,39 @@ void main() {
     expect(find.text('Message 0'), findsOneWidget);
     expect(find.byKey(const Key('load-older')), findsNothing);
   });
+
+  testWidgets(
+    'Refresh advances through ascending history and retains earlier messages',
+    (tester) async {
+      final forward = ForwardMessageRepository()
+        ..configureConversation(
+          requestId: 'request-1',
+          requesterId: 'owner-1',
+          acceptedHelperId: 'helper-1',
+        );
+      repository = forward;
+      for (var i = 0; i < 3; i++) {
+        await repository.sendMessage(
+          requestId: 'request-1',
+          senderId: 'helper-1',
+          clientMessageId: 'forward-$i',
+          body: 'Reply $i',
+        );
+      }
+      await tester.pumpWidget(screen(pageSize: 1));
+      await tester.pumpAndSettle();
+      expect(find.text('Reply 0'), findsOneWidget);
+      await tester.tap(find.byTooltip('Refresh messages'));
+      await tester.pumpAndSettle();
+      expect(find.text('Reply 0'), findsOneWidget);
+      expect(find.text('Reply 1'), findsOneWidget);
+      forward.denyNextPage = true;
+      await tester.tap(find.byKey(const Key('load-older')));
+      await tester.pumpAndSettle();
+      expect(find.text('Reply 0'), findsNothing);
+      expect(find.text('Reply 1'), findsNothing);
+      expect(find.byKey(const Key('message-input')), findsNothing);
+      expect(find.byKey(const Key('access-denied')), findsOneWidget);
+    },
+  );
 }

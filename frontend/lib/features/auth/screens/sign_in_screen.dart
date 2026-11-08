@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'create_account_screen.dart';
+import 'email_action_screen.dart';
+import '../auth_service.dart';
 
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({super.key});
+  const SignInScreen({super.key, this.authService});
+  final AuthService? authService;
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -14,6 +17,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  late final _auth = widget.authService ?? AuthService();
 
   bool _loading = false;
   bool _hidePassword = true;
@@ -35,10 +39,7 @@ class _SignInScreenState extends State<SignInScreen> {
     });
 
     try {
-      await Supabase.instance.client.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      await _auth.signIn(_emailController.text, _passwordController.text);
       // AuthGate handles navigation after the session changes.
     } on AuthException catch (e) {
       if (mounted) {
@@ -155,10 +156,39 @@ class _SignInScreenState extends State<SignInScreen> {
                           ? null
                           : () => Navigator.of(context).push(
                               MaterialPageRoute<void>(
-                                builder: (_) => const CreateAccountScreen(),
+                                builder: (_) =>
+                                    CreateAccountScreen(authService: _auth),
                               ),
                             ),
                       child: const Text('Create an account'),
+                    ),
+                    TextButton(
+                      onPressed: _loading
+                          ? null
+                          : () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => EmailActionScreen(
+                                  resetPassword: true,
+                                  authService: _auth,
+                                  initialEmail: _emailController.text,
+                                ),
+                              ),
+                            ),
+                      child: const Text('Forgot password?'),
+                    ),
+                    TextButton(
+                      onPressed: _loading
+                          ? null
+                          : () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => EmailActionScreen(
+                                  resetPassword: false,
+                                  authService: _auth,
+                                  initialEmail: _emailController.text,
+                                ),
+                              ),
+                            ),
+                      child: const Text('Resend confirmation email'),
                     ),
                   ],
                 ),

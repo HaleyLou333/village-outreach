@@ -1,3 +1,6 @@
+import 'package:uuid/uuid.dart';
+
+import '../../requests/services/request_service.dart';
 import '../models/help_offer.dart';
 
 class OfferException implements Exception {
@@ -34,6 +37,91 @@ abstract class OfferRepository {
     required String requesterId,
     required String requestOwnerId,
   });
+}
+
+class ApiOfferRepository implements OfferRepository {
+  ApiOfferRepository(this._api);
+
+  final RequestService _api;
+  ({String request, String helper, String message})? _lastDraft;
+  String? _operationKey;
+
+  @override
+  Future<HelpOffer> submitOffer({
+    required String requestId,
+    required String requestOwnerId,
+    required String helperId,
+    required String message,
+  }) async {
+    final body = message.trim();
+    if (body.isEmpty) throw const OfferException('Please enter a message.');
+    final draft = (request: requestId, helper: helperId, message: body);
+    if (_lastDraft != draft) {
+      _lastDraft = draft;
+      _operationKey = const Uuid().v4();
+    }
+    return HelpOffer.fromJson(
+      await _api.requestJson(
+        'POST',
+        '/offers',
+        operation: 'submit your offer',
+        body: {'request_id': requestId, 'message': body},
+        idempotencyKey: _operationKey,
+      ) as Map<String, dynamic>,
+    );
+  }
+
+  Future<List<HelpOffer>> _list(String requestId) async {
+    const limit = 100;
+    final offers = <HelpOffer>[];
+    for (var offset = 0; offset <= 10000; offset += limit) {
+      final page = await _api.requestJson(
+        'GET',
+        '/requests/$requestId/offers',
+        operation: 'load offers',
+        query: {'limit': '$limit', 'offset': '$offset'},
+      ) as List<dynamic>;
+      offers.addAll(
+        page.map((item) => HelpOffer.fromJson(item as Map<String, dynamic>)),
+      );
+      if (page.length < limit) break;
+    }
+    return offers;
+  }
+
+  @override
+  Future<List<HelpOffer>> getRequestOffers({
+    required String requestId,
+    required String requesterId,
+    required String requestOwnerId,
+  }) => _list(requestId);
+
+  @override
+  Future<HelpOffer?> getMyOffer({
+    required String requestId,
+    required String helperId,
+  }) async {
+    final offers = (await _list(requestId))
+        .where((offer) => offer.helperId == helperId);
+    for (final offer in offers) {
+      if (offer.status == OfferStatus.accepted) return offer;
+    }
+    return offers.lastOrNull;
+  }
+
+  @override
+  Future<HelpOffer> acceptOffer({
+    required String requestId,
+    required String offerId,
+    required String requesterId,
+    required String requestOwnerId,
+  }) async => HelpOffer.fromJson(
+    await _api.requestJson(
+      'POST',
+      '/offers/$offerId/accept',
+      operation: 'accept this offer',
+    ) as Map<String, dynamic>,
+  );
 }
 
 class MockOfferRepository implements OfferRepository {

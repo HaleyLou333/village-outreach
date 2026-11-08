@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../messaging/screens/private_conversation_screen.dart';
 import '../../messaging/services/message_service.dart';
+import '../../requests/services/request_service.dart';
 
 import '../models/help_offer.dart';
 import '../services/offer_service.dart';
@@ -14,6 +15,7 @@ class RequestOffersScreen extends StatefulWidget {
     required this.currentUserId,
     required this.repository,
     this.messageRepository,
+    this.api,
     this.isClosed = false,
   });
 
@@ -22,6 +24,7 @@ class RequestOffersScreen extends StatefulWidget {
   final String currentUserId;
   final OfferRepository repository;
   final MessageRepository? messageRepository;
+  final RequestService? api;
   final bool isClosed;
 
   @override
@@ -38,6 +41,8 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
   String? _error;
 
   bool get _isOwner => widget.currentUserId == widget.requestOwnerId;
+  bool get _canOpenConversation =>
+      widget.messageRepository != null || widget.api != null;
 
   @override
   void initState() {
@@ -147,7 +152,15 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
   Future<void> _openConversation(HelpOffer offer) async {
     if (offer.status != OfferStatus.accepted) return;
 
-    final repository = widget.messageRepository;
+    final api = widget.api;
+    final repository =
+        widget.messageRepository ??
+        (api == null
+            ? null
+            : ApiMessageRepository(
+                api,
+                receiverId: _isOwner ? offer.helperId : widget.requestOwnerId,
+              ));
     if (repository == null) return;
 
     if (widget.currentUserId != widget.requestOwnerId &&
@@ -185,6 +198,8 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
         return 'Accepted';
       case OfferStatus.declined:
         return 'Declined';
+      case OfferStatus.withdrawn:
+        return 'Withdrawn';
     }
   }
 
@@ -204,7 +219,9 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _refresh,
+              onRefresh: () async {
+                if (!_busy && !_loading) await _refresh();
+              },
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -257,13 +274,13 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
               if (offer.status == OfferStatus.accepted) ...[
                 const SizedBox(height: 16),
                 const Text('Your offer was accepted!'),
-                if (widget.messageRepository != null) ...[
+                if (_canOpenConversation) ...[
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     key: const Key('open-helper-conversation'),
                     onPressed: () => _openConversation(offer),
                     icon: const Icon(Icons.chat_bubble_outline),
-                    label: const Text('Open Conversation (Demo)'),
+                    label: const Text('Open Conversation'),
                   ),
                 ],
               ],
@@ -326,7 +343,7 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        for (final offer in _offers)
+        for (final (index, offer) in _offers.indexed)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -334,7 +351,7 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Helper: ${offer.helperId}',
+                    'Offer ${index + 1}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
@@ -342,13 +359,13 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
                   const SizedBox(height: 8),
                   Text('Status: ${_statusLabel(offer.status)}'),
                   if (offer.status == OfferStatus.accepted &&
-                      widget.messageRepository != null) ...[
+                      _canOpenConversation) ...[
                     const SizedBox(height: 12),
                     FilledButton.icon(
                       key: Key('open-owner-conversation-${offer.id}'),
                       onPressed: () => _openConversation(offer),
                       icon: const Icon(Icons.chat_bubble_outline),
-                      label: const Text('Open Conversation (Demo)'),
+                      label: const Text('Open Conversation'),
                     ),
                   ],
                   if (offer.status == OfferStatus.pending &&

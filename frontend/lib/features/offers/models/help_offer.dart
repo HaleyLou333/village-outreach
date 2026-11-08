@@ -1,4 +1,4 @@
-enum OfferStatus { pending, accepted, declined }
+enum OfferStatus { pending, accepted, declined, withdrawn }
 
 class HelpOffer {
   const HelpOffer({
@@ -16,6 +16,15 @@ class HelpOffer {
   final String message;
   final OfferStatus status;
   final DateTime createdAt;
+
+  factory HelpOffer.fromJson(Map<String, dynamic> json) => HelpOffer(
+    id: json['id'] as String,
+    requestId: json['request_id'] as String,
+    helperId: json['helper_id'] as String,
+    message: json['message'] as String,
+    status: OfferStatus.values.byName(json['status'] as String),
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   HelpOffer copyWith({OfferStatus? status}) {
     return HelpOffer(

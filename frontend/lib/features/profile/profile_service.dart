@@ -1,4 +1,4 @@
-
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -17,8 +17,8 @@ class ProfileException implements Exception {
 }
 
 class ProfileService {
-  static const String _baseUrl =
-      String.fromEnvironment('API_BASE_URL');
+  final String baseUrl;
+  final Duration requestTimeout;
 
   final SupabaseClient _supabase;
   final http.Client _http;
@@ -26,14 +26,13 @@ class ProfileService {
   ProfileService({
     SupabaseClient? supabase,
     http.Client? httpClient,
-  })  : _supabase = supabase ?? Supabase.instance.client,
-        _http = httpClient ?? http.Client();
+    this.baseUrl = const String.fromEnvironment('API_BASE_URL'),
+    this.requestTimeout = const Duration(seconds: 15),
+  }) : _supabase = supabase ?? Supabase.instance.client,
+       _http = httpClient ?? http.Client();
 
   Future<UserProfile> getProfile() async {
-    final response = await _sendAuthenticated(
-      'GET',
-      '/users/me',
-    );
+    final response = await _sendAuthenticated('GET', '/users/me');
 
     return _parseProfile(response);
   }
@@ -53,10 +52,8 @@ class ProfileService {
     String path, {
     Map<String, dynamic>? body,
   }) async {
-    if (_baseUrl.isEmpty) {
-      throw const ProfileException(
-        'API_BASE_URL is not configured.',
-      );
+    if (baseUrl.isEmpty) {
+      throw const ProfileException('API_BASE_URL is not configured.');
     }
 
     var session = _supabase.auth.currentSession;
@@ -92,12 +89,7 @@ class ProfileService {
       );
     }
 
-    var response = await _request(
-      method,
-      path,
-      session.accessToken,
-      body,
-    );
+    var response = await _request(method, path, session.accessToken, body);
 
     // Retry once after refreshing a rejected access token.
     if (response.statusCode == 401) {
@@ -112,12 +104,7 @@ class ProfileService {
           );
         }
 
-        response = await _request(
-          method,
-          path,
-          newSession.accessToken,
-          body,
-        );
+        response = await _request(method, path, newSession.accessToken, body);
       } catch (_) {
         throw const ProfileException(
           'Your session expired. Please sign in again.',
@@ -136,9 +123,7 @@ class ProfileService {
     Map<String, dynamic>? body,
   ) async {
     try {
-      final uri = Uri.parse(
-        '${_baseUrl.replaceAll(RegExp(r'/$'), '')}$path',
-      );
+      final uri = Uri.parse('${baseUrl.replaceAll(RegExp(r'/$'), '')}$path');
 
       final headers = {
         'Authorization': 'Bearer $accessToken',
@@ -147,14 +132,16 @@ class ProfileService {
       };
 
       if (method == 'PATCH') {
-        return await _http.patch(
-          uri,
-          headers: headers,
-          body: jsonEncode(body),
-        );
+        return await _http
+            .patch(uri, headers: headers, body: jsonEncode(body))
+            .timeout(requestTimeout);
       }
 
-      return await _http.get(uri, headers: headers);
+      return await _http.get(uri, headers: headers).timeout(requestTimeout);
+    } on TimeoutException {
+      throw const ProfileException(
+        'The profile request timed out. Please try again.',
+      );
     } catch (_) {
       throw const ProfileException(
         'Unable to reach the profile server. Check that FastAPI is running.',

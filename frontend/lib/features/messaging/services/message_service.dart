@@ -1,16 +1,24 @@
+import '../../requests/services/request_service.dart';
 import '../models/private_message.dart';
 
 class MessageException implements Exception {
-  const MessageException(this.message);
+  const MessageException(this.message, {this.statusCode});
   final String message;
+  final int? statusCode;
   @override
   String toString() => message;
 }
 
 class MessagePage {
-  const MessagePage({required this.messages, required this.nextCursor});
+  const MessagePage({
+    required this.messages,
+    required this.nextCursor,
+    this.refreshCursor,
+  });
   final List<PrivateMessage> messages;
   final String? nextCursor;
+  // Ascending history can resume here even after reaching the end.
+  final String? refreshCursor;
 }
 
 abstract class MessageRepository {
@@ -27,6 +35,70 @@ abstract class MessageRepository {
     required String clientMessageId,
     required String body,
   });
+}
+
+class ApiMessageRepository implements MessageRepository {
+  ApiMessageRepository(this._api, {required this.receiverId});
+
+  final RequestService _api;
+  final String receiverId;
+
+  @override
+  Future<MessagePage> getMessages({
+    required String requestId,
+    required String currentUserId,
+    String? cursor,
+    int limit = 20,
+  }) async {
+    final offset = cursor == null ? 0 : int.parse(cursor);
+    try {
+      final data = await _api.requestJson(
+        'GET',
+        '/requests/$requestId/messages',
+        operation: 'load messages',
+        query: {'limit': '$limit', 'offset': '$offset'},
+      ) as List<dynamic>;
+      final nextOffset = offset + data.length;
+      return MessagePage(
+        messages: data
+            .map(
+              (item) => PrivateMessage.fromJson(item as Map<String, dynamic>),
+            )
+            .toList(),
+        nextCursor: data.length == limit && nextOffset <= 10000
+            ? '$nextOffset'
+            : null,
+        refreshCursor: '${nextOffset.clamp(0, 10000)}',
+      );
+    } on RequestApiException catch (error) {
+      throw MessageException(error.message, statusCode: error.statusCode);
+    }
+  }
+
+  @override
+  Future<PrivateMessage> sendMessage({
+    required String requestId,
+    required String senderId,
+    required String clientMessageId,
+    required String body,
+  }) async {
+    try {
+      final data = await _api.requestJson(
+        'POST',
+        '/messages',
+        operation: 'send your message',
+        body: {
+          'request_id': requestId,
+          'receiver_id': receiverId,
+          'body': body,
+        },
+        idempotencyKey: clientMessageId,
+      ) as Map<String, dynamic>;
+      return PrivateMessage.fromJson(data, clientMessageId: clientMessageId);
+    } on RequestApiException catch (error) {
+      throw MessageException(error.message, statusCode: error.statusCode);
+    }
+  }
 }
 
 class MockMessageRepository implements MessageRepository {

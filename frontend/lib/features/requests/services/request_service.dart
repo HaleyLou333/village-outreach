@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -50,7 +49,7 @@ abstract class RequestRepository {
 
 /// Handles communication with the Village Outreach FastAPI backend.
 class RequestService implements RequestRepository {
-  static const String _baseUrl = String.fromEnvironment('API_BASE_URL');
+  final String _baseUrl;
 
   final SupabaseClient _supabase;
   final http.Client _httpClient;
@@ -59,9 +58,36 @@ class RequestService implements RequestRepository {
   RequestService({
     SupabaseClient? supabase,
     http.Client? httpClient,
+    String? baseUrl,
   }) : _supabase = supabase ?? Supabase.instance.client,
        _httpClient = httpClient ?? http.Client(),
-       _ownsHttpClient = httpClient == null;
+       _ownsHttpClient = httpClient == null,
+       _baseUrl = baseUrl ?? const String.fromEnvironment('API_BASE_URL');
+
+  /// Reuses the signed-in transport for related request operations.
+  Future<dynamic> requestJson(
+    String method,
+    String path, {
+    required String operation,
+    Map<String, String>? query,
+    Map<String, dynamic>? body,
+    String? idempotencyKey,
+  }) async {
+    final response = await _authorizedRequest(
+      method,
+      _buildUri(path, queryParameters: query),
+      operation: operation,
+      body: body,
+      additionalHeaders: {'Idempotency-Key': ?idempotencyKey},
+    );
+    try {
+      return jsonDecode(response.body);
+    } on FormatException {
+      throw const RequestApiException(
+        'The service returned an unexpected response.',
+      );
+    }
+  }
 
   /// Retrieves active requests near the supplied coordinates.
   @override
@@ -104,11 +130,7 @@ class RequestService implements RequestRepository {
       }
 
       final requests = decoded
-          .map(
-            (item) => HelpRequest.fromJson(
-              item as Map<String, dynamic>,
-            ),
-          )
+          .map((item) => HelpRequest.fromJson(item as Map<String, dynamic>))
           .toList();
 
       debugPrint('Requests returned: ${requests.length}');
@@ -127,9 +149,7 @@ class RequestService implements RequestRepository {
   /// Retrieves the full details of a single request.
   @override
   Future<HelpRequest> getRequestDetail(String requestId) async {
-    final uri = _buildUri(
-      '/requests/${Uri.encodeComponent(requestId)}',
-    );
+    final uri = _buildUri('/requests/${Uri.encodeComponent(requestId)}');
 
     debugPrint('========== REQUEST DETAILS ==========');
     debugPrint('Request ID: $requestId');
@@ -160,12 +180,8 @@ class RequestService implements RequestRepository {
   }) async {
     final uri = _buildUri('/requests');
 
-    if (!RegExp(
-      r'^[A-Za-z0-9._:-]{8,128}$',
-    ).hasMatch(idempotencyKey)) {
-      throw const RequestApiException(
-        'Invalid request submission key.',
-      );
+    if (!RegExp(r'^[A-Za-z0-9._:-]{8,128}$').hasMatch(idempotencyKey)) {
+      throw const RequestApiException('Invalid request submission key.');
     }
 
     debugPrint('========== CREATE REQUEST ==========');
@@ -175,9 +191,7 @@ class RequestService implements RequestRepository {
       uri,
       operation: 'create requests',
       body: data,
-      additionalHeaders: {
-        'Idempotency-Key': idempotencyKey,
-      },
+      additionalHeaders: {'Idempotency-Key': idempotencyKey},
     );
 
     final request = _decodeRequest(response);
@@ -199,14 +213,10 @@ class RequestService implements RequestRepository {
     required Map<String, dynamic> changes,
   }) async {
     if (changes.isEmpty) {
-      throw const RequestApiException(
-        'At least one field must be updated.',
-      );
+      throw const RequestApiException('At least one field must be updated.');
     }
 
-    final uri = _buildUri(
-      '/requests/${Uri.encodeComponent(requestId)}',
-    );
+    final uri = _buildUri('/requests/${Uri.encodeComponent(requestId)}');
 
     debugPrint('========== UPDATE REQUEST ==========');
     debugPrint('Request ID: $requestId');
@@ -227,10 +237,7 @@ class RequestService implements RequestRepository {
   }
 
   /// Builds API URLs and validates configuration.
-  Uri _buildUri(
-    String path, {
-    Map<String, String>? queryParameters,
-  }) {
+  Uri _buildUri(String path, {Map<String, String>? queryParameters}) {
     if (_baseUrl.trim().isEmpty) {
       debugPrint('CONFIGURATION ERROR: API_BASE_URL is missing.');
 
@@ -250,14 +257,10 @@ class RequestService implements RequestRepository {
       );
     }
 
-    final normalizedBase = _baseUrl.replaceFirst(
-      RegExp(r'/$'),
-      '',
-    );
+    final normalizedBase = _baseUrl.replaceFirst(RegExp(r'/$'), '');
 
-    return Uri.parse('$normalizedBase$path').replace(
-      queryParameters: queryParameters,
-    );
+    return Uri.parse('$normalizedBase$path')
+        .replace(queryParameters: queryParameters);
   }
 
   /// Performs authenticated GET, POST, and PATCH operations.
@@ -274,7 +277,8 @@ class RequestService implements RequestRepository {
     debugPrint('-------------------------------------');
     debugPrint('API Request: $method $uri');
 
-    var token = _supabase.auth.currentSession?.accessToken;
+    final session = _supabase.auth.currentSession;
+    var token = session?.accessToken;
 
     if (token == null || token.isEmpty) {
       debugPrint('AUTH ERROR: No active Supabase session.');
@@ -305,26 +309,16 @@ class RequestService implements RequestRepository {
 
         case 'POST':
           return _httpClient
-              .post(
-                uri,
-                headers: headers,
-                body: encodedBody,
-              )
+              .post(uri, headers: headers, body: encodedBody)
               .timeout(const Duration(seconds: 15));
 
         case 'PATCH':
           return _httpClient
-              .patch(
-                uri,
-                headers: headers,
-                body: encodedBody,
-              )
+              .patch(uri, headers: headers, body: encodedBody)
               .timeout(const Duration(seconds: 15));
 
         default:
-          throw const RequestApiException(
-            'Unsupported HTTP operation.',
-          );
+          throw const RequestApiException('Unsupported HTTP operation.');
       }
     }
 
@@ -347,14 +341,18 @@ class RequestService implements RequestRepository {
       debugPrint('HTTP 401: Attempting token refresh.');
 
       try {
+        if (_supabase.auth.currentSession?.user.id != session?.user.id) {
+          throw const RequestApiException('The signed-in account changed.');
+        }
         final refreshed = await _supabase.auth.refreshSession();
 
         token = refreshed.session?.accessToken;
 
-        if (token == null || token.isEmpty) {
-          throw const RequestApiException(
-            'No refreshed access token.',
-          );
+        if (token == null ||
+            token.isEmpty ||
+            refreshed.session?.user.id != session?.user.id ||
+            _supabase.auth.currentSession?.user.id != session?.user.id) {
+          throw const RequestApiException('No refreshed access token.');
         }
       } catch (error) {
         debugPrint('TOKEN REFRESH ERROR: $error');
@@ -367,9 +365,7 @@ class RequestService implements RequestRepository {
 
       try {
         response = await send(token);
-        debugPrint(
-          'HTTP status after refresh: ${response.statusCode}',
-        );
+        debugPrint('HTTP status after refresh: ${response.statusCode}');
       } catch (error) {
         debugPrint('NETWORK ERROR after token refresh: $error');
 
@@ -386,8 +382,7 @@ class RequestService implements RequestRepository {
       '${response.headers['content-type'] ?? 'unknown'}',
     );
 
-    if (response.statusCode >= 200 &&
-        response.statusCode < 300) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       debugPrint('API request completed successfully.');
       return response;
     }
@@ -396,10 +391,7 @@ class RequestService implements RequestRepository {
   }
 
   /// Converts backend error responses into user-friendly errors.
-  RequestApiException _parseApiError(
-    http.Response response,
-    String operation,
-  ) {
+  RequestApiException _parseApiError(http.Response response, String operation) {
     String? detail;
     String? code;
     List<dynamic> fields = const [];
@@ -505,9 +497,7 @@ class RequestService implements RequestRepository {
       final decoded = jsonDecode(response.body);
 
       if (decoded is! Map<String, dynamic>) {
-        throw const FormatException(
-          'Expected a request object.',
-        );
+        throw const FormatException('Expected a request object.');
       }
 
       return HelpRequest.fromJson(decoded);

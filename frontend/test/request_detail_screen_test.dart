@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:village_outreach/features/profile/profile_service.dart';
+import 'package:village_outreach/features/offers/services/offer_service.dart';
 import 'package:village_outreach/features/profile/user_profile.dart';
 import 'package:village_outreach/features/requests/models/help_request.dart';
 import 'package:village_outreach/features/requests/screens/request_detail_screen.dart';
@@ -167,6 +168,7 @@ Future<void> openDetails(
         requestId: requestId,
         requestRepository: repository,
         profileService: FakeProfileService(applicationUserId),
+        offerRepository: MockOfferRepository(),
       ),
     ),
   );
@@ -409,7 +411,7 @@ void main() {
     });
   });
 
-  group('CCVO-61 Offer Navigation (Debug Demo)', () {
+  group('CCVO-61 Offer Navigation', () {
     testWidgets('Owner can open Review Offers demo', (tester) async {
       final repository = FakeRequestRepository(makeRequest());
       await openDetails(
@@ -418,11 +420,11 @@ void main() {
         applicationUserId: ownerId,
       );
 
-      await scrollToText(tester, 'Review Offers (Demo)');
-      expect(find.text('Review Offers (Demo)'), findsOneWidget);
-      expect(find.text('Offer to Help (Demo)'), findsNothing);
+      await scrollToText(tester, 'Review Offers');
+      expect(find.text('Review Offers'), findsOneWidget);
+      expect(find.text('Offer to Help'), findsNothing);
 
-      await tester.tap(find.text('Review Offers (Demo)'));
+      await tester.tap(find.text('Review Offers'));
       await tester.pumpAndSettle();
 
       expect(find.text('Incoming Offers'), findsWidgets);
@@ -438,11 +440,11 @@ void main() {
         applicationUserId: otherUserId,
       );
 
-      await scrollToText(tester, 'Offer to Help (Demo)');
-      expect(find.text('Offer to Help (Demo)'), findsOneWidget);
-      expect(find.text('Review Offers (Demo)'), findsNothing);
+      await scrollToText(tester, 'Offer to Help');
+      expect(find.text('Offer to Help'), findsOneWidget);
+      expect(find.text('Review Offers'), findsNothing);
 
-      await tester.tap(find.text('Offer to Help (Demo)'));
+      await tester.tap(find.text('Offer to Help'));
       await tester.pumpAndSettle();
 
       expect(find.text('Submit Offer'), findsOneWidget);
@@ -460,8 +462,8 @@ void main() {
         );
 
         expect(find.byKey(const Key('open-offers-demo')), findsNothing);
-        expect(find.text('Review Offers (Demo)'), findsNothing);
-        expect(find.text('Offer to Help (Demo)'), findsNothing);
+        expect(find.text('Review Offers'), findsNothing);
+        expect(find.text('Offer to Help'), findsNothing);
         expect(repository.updateCalls, 0);
       }
     });

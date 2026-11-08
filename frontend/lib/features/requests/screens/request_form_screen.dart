@@ -54,6 +54,7 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
   String? _category;
   String _urgency = 'standard';
   RequestArea? _area;
+  late final List<RequestArea> _availableAreas;
 
   bool _saving = false;
   String? _error;
@@ -78,12 +79,13 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
       _category = existing.category;
       _urgency = existing.urgency;
 
-      for (final area in requestAreas) {
-        if (area.name == existing.area) {
-          _area = area;
-          break;
-        }
-      }
+      _area = RequestArea(existing.area, existing.latitude, existing.longitude);
+      _availableAreas = [
+        _area!,
+        ...requestAreas.where((area) => area.name != existing.area),
+      ];
+    } else {
+      _availableAreas = [...requestAreas];
     }
   }
 
@@ -361,7 +363,7 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
                   labelText: 'Area',
                   border: OutlineInputBorder(),
                 ),
-                items: requestAreas
+                items: _availableAreas
                     .map(
                       (area) =>
                           DropdownMenuItem(value: area, child: Text(area.name)),

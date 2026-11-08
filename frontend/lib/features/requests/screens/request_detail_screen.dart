@@ -35,13 +35,11 @@ class RequestDetailScreen extends StatefulWidget {
   State<RequestDetailScreen> createState() => _RequestDetailScreenState();
 }
 
-// Shared only for development demos. Real offers require the backend API.
-final MockOfferRepository _developmentOfferRepository = MockOfferRepository();
-// Demo-only, shared between visits; never used as a production message store.
-final MockMessageRepository _developmentMessageRepository =
-    MockMessageRepository();
-
 class _RequestDetailScreenState extends State<RequestDetailScreen> {
+  // Explicitly opt in when investigating ownership; keep normal demos clean.
+  static const _showOwnershipDiagnostics =
+      kDebugMode && bool.fromEnvironment('SHOW_OWNERSHIP_DIAGNOSTICS');
+
   late final RequestRepository _repository;
   late final bool _ownsRepository;
 
@@ -215,13 +213,19 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   Future<void> _openOffers() async {
     final request = _request;
     final currentUserId = _applicationUserId;
-    if (!kDebugMode ||
-        request == null ||
+    if (request == null ||
         currentUserId == null ||
         _loadingProfile ||
         _updating) {
       return;
     }
+
+    final requestRepository = _repository;
+    final api = requestRepository is RequestService ? requestRepository : null;
+    final offers =
+        widget.offerRepository ??
+        (api == null ? null : ApiOfferRepository(api));
+    if (offers == null) return;
 
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -229,9 +233,9 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           requestId: request.id,
           requestOwnerId: request.requesterId,
           currentUserId: currentUserId,
-          repository: widget.offerRepository ?? _developmentOfferRepository,
-          messageRepository:
-              widget.messageRepository ?? _developmentMessageRepository,
+          repository: offers,
+          api: api,
+          messageRepository: widget.messageRepository,
           isClosed: request.isClosed,
         ),
       ),
@@ -547,24 +551,18 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             ),
           ],
 
-          // Mock offers are only accessible in debug builds.
-          // Never present locally stored demo offers as real submissions.
-          if (kDebugMode &&
-              _applicationUserId != null &&
+          if (_applicationUserId != null &&
               !_loadingProfile &&
-              _profileError == null) ...[
+              _profileError == null &&
+              (widget.offerRepository != null ||
+                  _repository is RequestService)) ...[
             const SizedBox(height: 24),
             const Divider(),
             const SizedBox(height: 12),
-            Text('Helper Offers (Demo)', style: theme.textTheme.titleLarge),
-            const SizedBox(height: 8),
-            const Text(
-              'Development preview only. Offers are stored in memory '
-              'and are not sent to the server.',
-            ),
+            Text('Helper Offers', style: theme.textTheme.titleLarge),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              key: const Key('open-offers-demo'),
+              key: const Key('open-offers'),
               onPressed: _updating ? null : _openOffers,
               icon: Icon(
                 isOwner ? Icons.people_outline : Icons.volunteer_activism,
@@ -572,11 +570,9 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
               label: Text(
                 request.isClosed
                     ? (isOwner
-                          ? 'Review Offers & Messages (Demo)'
-                          : 'View Offer & Messages (Demo)')
-                    : (isOwner
-                          ? 'Review Offers (Demo)'
-                          : 'Offer to Help (Demo)'),
+                          ? 'Review Offers & Messages'
+                          : 'View Offer & Messages')
+                    : (isOwner ? 'Review Offers' : 'Offer to Help'),
               ),
             ),
           ],
@@ -695,20 +691,11 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
           const SizedBox(height: 32),
 
-          // Debug-only ownership information.
-          if (kDebugMode) ...[
+          // Developer diagnostics are hidden unless explicitly enabled.
+          if (_showOwnershipDiagnostics) ...[
             _buildDebugPanel(request),
             const SizedBox(height: 24),
           ],
-
-          // Request identifier.
-          Text('Request ID', style: theme.textTheme.titleLarge),
-
-          const SizedBox(height: 8),
-
-          SelectableText(request.id),
-
-          const SizedBox(height: 24),
         ],
       ),
     );

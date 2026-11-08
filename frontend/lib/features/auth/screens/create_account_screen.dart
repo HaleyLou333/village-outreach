@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../auth_service.dart';
+import '../auth_feedback.dart';
+import 'email_action_screen.dart';
+
 class CreateAccountScreen extends StatefulWidget {
-  const CreateAccountScreen({super.key});
+  const CreateAccountScreen({super.key, this.authService});
+  final AuthService? authService;
 
   @override
   State<CreateAccountScreen> createState() => _CreateAccountScreenState();
@@ -13,6 +18,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  late final _auth = widget.authService ?? AuthService();
 
   bool _loading = false;
   bool _hidePassword = true;
@@ -35,23 +41,28 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     });
 
     try {
-      final response = await Supabase.instance.client.auth.signUp(
-        email: _email.text.trim(),
-        password: _password.text,
-        data: {'display_name': _name.text.trim()},
+      final response = await _auth.signUp(
+        _name.text,
+        _email.text,
+        _password.text,
       );
 
       if (!mounted) return;
 
       if (response.session == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Check your email to confirm your account, '
-              'then return to sign in.',
+        final email = _email.text.trim();
+        _password.clear();
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(
+            builder: (_) => EmailActionScreen(
+              resetPassword: false,
+              authService: _auth,
+              initialEmail: email,
+              emailAlreadyRequested: true,
             ),
           ),
         );
+        return;
       }
 
       Navigator.of(context).pop();
@@ -161,7 +172,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       child: FilledButton(
                         onPressed: _loading ? null : _createAccount,
                         child: _loading
-                            ? const CircularProgressIndicator()
+                            ? const AuthBusyLabel('Creating account...')
                             : const Text('Create Account'),
                       ),
                     ),

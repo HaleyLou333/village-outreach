@@ -66,6 +66,14 @@ void main() {
     expect(find.text('Offer Help'), findsOneWidget);
   });
 
+  testWidgets('Home never exposes an access-token copy control', (
+    tester,
+  ) async {
+    await loadHomeScreen(tester);
+    expect(find.byTooltip('Copy JWT for API testing'), findsNothing);
+    expect(find.byIcon(Icons.key_outlined), findsNothing);
+  });
+
   testWidgets('Home screen displays nearby requests section', (tester) async {
     await loadHomeScreen(tester);
 
