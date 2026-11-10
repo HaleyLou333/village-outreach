@@ -74,11 +74,15 @@ def distance_expression(latitude: float, longitude: float):
     # Numeric round and Decimal ROUND_HALF_UP both round ties away from zero.
     public_lat = cast(func.round(cast(cast(HelpRequest.latitude, Text), Numeric), 2), Float)
     public_lon = cast(func.round(cast(cast(HelpRequest.longitude, Text), Numeric), 2), Float)
-    lat_delta = func.radians(public_lat - latitude)
-    lon_delta = func.radians(public_lon - longitude)
+    return great_circle_distance(public_lat, public_lon, latitude, longitude)
+
+
+def great_circle_distance(row_latitude, row_longitude, latitude: float, longitude: float):
+    lat_delta = func.radians(row_latitude - latitude)
+    lon_delta = func.radians(row_longitude - longitude)
     haversine = func.power(func.sin(lat_delta / 2), 2) + func.cos(
         func.radians(latitude)
-    ) * func.cos(func.radians(public_lat)) * func.power(func.sin(lon_delta / 2), 2)
+    ) * func.cos(func.radians(row_latitude)) * func.power(func.sin(lon_delta / 2), 2)
     return (
         2 * EARTH_RADIUS_KM * func.asin(func.sqrt(func.least(1.0, func.greatest(0.0, haversine))))
     )
