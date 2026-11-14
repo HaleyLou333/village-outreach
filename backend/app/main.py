@@ -10,13 +10,17 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.messages import router as message_router
 from app.api.offers import router as offer_router
 from app.api.profiles import router as profile_router
+from app.api.reports import router as report_router
 from app.api.requests import router as request_router
+from app.api.resources import router as resource_router
 
 app = FastAPI(title="CCVO Backend", version="0.1.0")
 app.include_router(profile_router)
 app.include_router(request_router)
 app.include_router(offer_router)
 app.include_router(message_router)
+app.include_router(resource_router)
+app.include_router(report_router)
 logger = logging.getLogger("app.http")
 
 
@@ -25,7 +29,9 @@ async def request_context(request: Request, call_next):
     request_id = str(uuid4())
     response = await call_next(request)
     response.headers["X-Request-ID"] = request_id
-    if request.url.path.startswith(("/requests", "/users", "/offers", "/messages")):
+    if request.url.path.startswith(
+        ("/requests", "/users", "/offers", "/messages", "/resources", "/reports")
+    ):
         response.headers["Cache-Control"] = "no-store"
     logger.info(
         "request_id=%s method=%s path=%s status=%s",
@@ -39,7 +45,7 @@ async def request_context(request: Request, call_next):
 
 @app.exception_handler(StarletteHTTPException)
 async def request_error(request: Request, error: StarletteHTTPException):
-    if request.url.path.split("/")[1] in ("requests", "offers", "messages"):
+    if request.url.path.split("/")[1] in ("requests", "offers", "messages", "resources", "reports"):
         codes = {
             401: "unauthenticated",
             403: "forbidden",
@@ -60,7 +66,7 @@ async def request_error(request: Request, error: StarletteHTTPException):
 def invalid_request(request: Request, error: RequestValidationError) -> JSONResponse:
     # Do not reflect arbitrary profile data (including malformed Unicode) in errors.
     content = {"detail": "Invalid request data."}
-    if request.url.path.split("/")[1] in ("requests", "offers", "messages"):
+    if request.url.path.split("/")[1] in ("requests", "offers", "messages", "resources", "reports"):
         content.update(
             code="invalid_request",
             fields=[{"loc": list(item["loc"]), "type": item["type"]} for item in error.errors()],
