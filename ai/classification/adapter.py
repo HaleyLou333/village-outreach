@@ -6,6 +6,7 @@ class ClassificationResult:
     category: str
     result_source: str
     confidence: float = 0.0
+    mapping_version: str = "v1"
 
 
 class ClassificationAdapter:
