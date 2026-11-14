@@ -529,6 +529,14 @@ its own test records on exit. It never uses hosted Supabase Auth or database dat
 See [Sprint 2 verification](../docs/sprint-2-backend-verification.md) for results
 and the review handoff.
 
+## Sprint 3 offers and messages
+
+See [Sprint 3 backend contract](../docs/sprint-3-backend-contract.md) for
+CCVO-10/11/36/32/37 routes, schemas, authorization, retries, migration ordering,
+and Flutter integration examples. With the disposable test environment above,
+run `.\.venv\Scripts\python.exe -m scripts.verify_sprint3` for a real HTTP
+offer/acceptance/private-message walkthrough.
+
 ## Review workflow
 
 Work is developed on `feature/backend`. After local testing, submit a PR into

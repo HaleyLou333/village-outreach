@@ -6,12 +6,12 @@ The app brings neighborhood requests and community resources into one place so p
 
 ## Project Status
 
-**Pre-alpha / in development — November 1, 2026.** The repository contains a Flutter UI prototype, a FastAPI backend, and synthetic AI evaluation fixtures. It is not yet a complete, connected mutual-aid service or a public app-store release.
+**Pre-alpha / in development.** The Android development build connects Flutter to FastAPI and Supabase for the core mutual-aid flow.
 
-- **Flutter:** Branded home screen with sample requests. Sign-in, request submission, navigation, maps, and backend integration are not connected in this prototype.
-- **Backend:** Health endpoint, PostgreSQL migrations, Supabase token verification, and profile/help-request APIs are integrated into `dev`. A connected mobile walkthrough remains pending.
-- **AI:** Synthetic fixtures, a fixture validator, and a documented privacy/classification flow. Live classification and provider integration remain planned work.
-- **Deployment:** Running the UI does not start or connect the backend. Local API code does not mean the hosted database or service has been updated.
+- **Flutter:** Sign-in, profiles, requests, offers, acceptance, and private conversations work against a configured API. Nearby uses a selected development area and refreshes after posting.
+- **Backend:** FastAPI validates Supabase sessions and stores profiles, requests, offers, and messages in PostgreSQL. See the [Sprint 3 API contract](docs/sprint-3-backend-contract.md).
+- **AI:** The local baseline classifier, synthetic fixtures, and provider research are available for evaluation. Live provider integration remains planned.
+- **Deployment:** Run the API separately and apply the migrations to the development database before testing the full app.
 
 See [Alpha Features](#alpha-features), [Installation](#installation), and [Development Setup](#development-setup) for scope and setup.
 
@@ -74,12 +74,12 @@ Village Outreach uses a mobile-first architecture:
 
 ### **Database**
 - PostgreSQL (Supabase or hosted PostgreSQL)
-- Implemented backend models: User and HelpRequest
-- Planned additional entities: Offer, Message, Resource, Report, Organization
+- Implemented backend models: User, HelpRequest, Offer, and Message
+- Planned additional entities: Resource, Report, and Organization
 
 ### **Authentication**
 - Supabase Auth
-- Backend validates signed access tokens; Flutter sign-in integration remains pending
+- Flutter signs in through Supabase Auth. FastAPI validates the signed access token on protected routes.
 
 ### **Maps Provider**
 - Google Maps (planned integration)
@@ -209,7 +209,7 @@ See the [AI data flow](docs/ai/data-flow.md) and [evaluation privacy rules](ai/e
 
 ## Installation
 
-There is no published installer or app-store release documented in this repository yet. To try the current UI prototype, use an Android emulator or a development device and follow the [Flutter setup](#flutter-prototype) below, or ask the frontend maintainer for a trusted development APK.
+To try the app, follow the [Flutter setup](#flutter-development-build) on an Android emulator or development device, or use a team-provided development APK.
 
 For a team-provided debug APK:
 
@@ -239,9 +239,9 @@ Set-Location village-outreach
 git switch dev
 ```
 
-`dev` is the integration branch and includes the Sprint 2 profile/request APIs documented here.
+`dev` is the integration branch for the app and API.
 
-### Flutter prototype
+### Flutter development build
 
 From the repository root:
 
@@ -252,15 +252,23 @@ flutter pub get
 flutter analyze
 flutter test
 flutter devices
-flutter run -d <device-id>
 ```
 
-Replace `<device-id>` with the Android emulator/device ID printed by `flutter devices`. Resolve Android SDK/license issues reported by `flutter doctor` before building. No backend credentials are needed for the static home screen.
+Create a local `frontend/config/dev.json` with `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` from the development Supabase project. Set `API_BASE_URL` to the development API address. This file is ignored by Git. Use the project's publishable key in Flutter and keep database credentials in the backend configuration.
+
+For the Android emulator with FastAPI running on the same computer, set `API_BASE_URL` to `http://127.0.0.1:8000` and run the following from `frontend`. Replace `<device-id>` with the ID from `flutter devices`.
+
+```powershell
+adb -s <device-id> reverse tcp:8000 tcp:8000
+flutter run -d <device-id> --dart-define-from-file=config/dev.json
+```
+
+Android confirmation and recovery links require `io.villageoutreach://auth-callback/` in the development project's allowed redirect URLs.
 
 To create a development APK from `frontend`:
 
 ```powershell
-flutter build apk --debug
+flutter build apk --debug --dart-define-from-file=config/dev.json
 ```
 
 The APK is written to `frontend/build/app/outputs/flutter-apk/app-debug.apk`. Debug builds are for development and review; release signing and app-store distribution remain separate work. See [Flutter build modes](https://docs.flutter.dev/testing/build-modes).
@@ -305,7 +313,7 @@ Review migrations before applying them to the intended development database. Fro
 .\.venv\Scripts\python.exe -m alembic current
 ```
 
-Restart the API afterward. Protected routes require a valid Supabase session access token in `Authorization: Bearer <access-token>`. Flutter sign-in and API integration are still pending, so the static UI cannot exercise this flow yet. The backend guide includes endpoint examples and runtime-role permissions.
+Restart the API afterward. Flutter sends the Supabase session access token on protected routes. The [backend guide](backend/README.md) includes endpoint examples and runtime role permissions.
 
 ### Verification
 
@@ -404,11 +412,9 @@ The repo separates:
 
 ## Known Issues
 
-- The Flutter home screen uses static sample requests and placeholder interactions.
-- The current Flutter widget suite has a failing home-screen assertion: `Ride to Appointment` is not found before the test scrolls. `flutter analyze` passes, but the widget suite needs follow-up.
-- Profile/request APIs are integrated into `dev` but still need a connected mobile walkthrough.
-- The hosted help-request migration is not confirmed applied; check the target database before integration testing.
-- Live AI classification, privacy screening, maps, offers, messaging, and reporting are not implemented in this checkout.
+- Nearby uses preset Phoenix-area search centers. Device location, interactive category/radius filters, and the maps experience remain planned.
+- Notifications and the Community, Help, and Events navigation destinations are placeholders. Use the refresh controls to see updates from another account.
+- Live AI classification, resource recommendations, and reporting remain planned.
 - Retention/deletion policy, moderation procedures, release signing, and public distribution remain unfinished.
 
 ## License
