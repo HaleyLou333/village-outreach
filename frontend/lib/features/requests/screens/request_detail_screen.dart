@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../profile/profile_service.dart';
+import '../../reports/models/safety_report.dart';
+import '../../reports/screens/report_screen.dart';
+import '../../reports/services/report_service.dart';
 import '../../offers/screens/request_offers_screen.dart';
 import '../../offers/services/offer_service.dart';
 import '../../messaging/services/message_service.dart';
@@ -20,6 +23,7 @@ class RequestDetailScreen extends StatefulWidget {
   final ProfileService? profileService;
   final OfferRepository? offerRepository;
   final MessageRepository? messageRepository;
+  final ReportRepository? reportRepository;
 
   const RequestDetailScreen({
     super.key,
@@ -29,6 +33,7 @@ class RequestDetailScreen extends StatefulWidget {
     this.profileService,
     this.offerRepository,
     this.messageRepository,
+    this.reportRepository,
   });
 
   @override
@@ -36,7 +41,6 @@ class RequestDetailScreen extends StatefulWidget {
 }
 
 class _RequestDetailScreenState extends State<RequestDetailScreen> {
-  // Explicitly opt in when investigating ownership; keep normal demos clean.
   static const _showOwnershipDiagnostics =
       kDebugMode && bool.fromEnvironment('SHOW_OWNERSHIP_DIAGNOSTICS');
 
@@ -60,8 +64,6 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   String? _applicationUserId;
 
   String? get _supabaseUserId {
-    // Unit/widget tests may not initialize Supabase.
-    // Ownership is determined by _applicationUserId instead.
     try {
       return Supabase.instance.client.auth.currentUser?.id;
     } catch (_) {
@@ -118,13 +120,9 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   void initState() {
     super.initState();
 
-    // Request repository:
-    // Use the injected fake during tests, or the real API service.
     _ownsRepository = widget.requestRepository == null;
     _repository = widget.requestRepository ?? RequestService();
 
-    // Profile service:
-    // Use the injected fake during tests, or GET /users/me.
     _ownsProfileService = widget.profileService == null;
     _profileService = widget.profileService ?? ProfileService();
 
@@ -132,10 +130,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     _loadRequest();
   }
 
-  /// Retrieves the internal application user ID from FastAPI.
-  ///
-  /// Supabase authentication IDs and internal application user IDs
-  /// are different UUIDs. Request ownership uses the internal ID.
+  /// Retrieves the internal application user ID.
   Future<void> _loadProfile() async {
     if (!mounted) return;
 
@@ -210,9 +205,54 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     }
   }
 
+  /// CCVO-70: Opens the safety reporting form.
+  Future<void> _openReport(ReportTargetType targetType) async {
+    final request = _request;
+
+    if (request == null ||
+        _applicationUserId == null ||
+        _loadingProfile ||
+        _profileError != null ||
+        _updating ||
+        _isOwner(request)) {
+      return;
+    }
+
+    final targetId = targetType == ReportTargetType.request
+        ? request.id
+        : request.requesterId;
+
+    final targetLabel = targetType == ReportTargetType.request
+        ? request.title
+        : 'Requester of "${request.title}"';
+
+    final repository = _repository;
+
+    final reports =
+        widget.reportRepository ??
+        (repository is RequestService
+            ? ReportService(transport: repository)
+            : null);
+
+    if (reports == null) return;
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ReportScreen(
+          targetType: targetType,
+          targetId: targetId,
+          targetLabel: targetLabel,
+          repository: reports,
+        ),
+      ),
+    );
+  }
+
+  /// Opens the request's offers and messaging screen.
   Future<void> _openOffers() async {
     final request = _request;
     final currentUserId = _applicationUserId;
+
     if (request == null ||
         currentUserId == null ||
         _loadingProfile ||
@@ -221,10 +261,13 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     }
 
     final requestRepository = _repository;
+
     final api = requestRepository is RequestService ? requestRepository : null;
+
     final offers =
         widget.offerRepository ??
         (api == null ? null : ApiOfferRepository(api));
+
     if (offers == null) return;
 
     await Navigator.of(context).push<void>(
@@ -240,11 +283,13 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         ),
       ),
     );
+
     if (!mounted) return;
+
     await _loadRequest();
   }
 
-  /// Opens the request form with the existing request information.
+  /// Opens the request form with existing information.
   Future<void> _editRequest() async {
     final request = _request;
 
@@ -330,7 +375,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     await _changeStatus(status);
   }
 
-  /// Sends PATCH /requests/{request_id} with the new status.
+  /// Sends PATCH /requests/{request_id}.
   Future<void> _changeStatus(String status) async {
     final request = _request;
 
@@ -382,7 +427,9 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       if (!mounted) return;
 
       setState(() {
-        _actionError = 'Unable to update this request. Please try again.';
+        _actionError =
+            'Unable to update this request. '
+            'Please try again.';
       });
 
       if (kDebugMode) {
@@ -397,7 +444,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     }
   }
 
-  /// Refreshes request state after an API conflict or rejection.
+  /// Refreshes state after an API conflict or rejection.
   Future<void> _loadLatestAfterActionError() async {
     try {
       final latest = await _repository.getRequestDetail(widget.requestId);
@@ -416,8 +463,6 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
   @override
   void dispose() {
-    // Dispose only services created by this screen.
-    // Injected services remain owned by the caller/test.
     if (_ownsProfileService) {
       _profileService.dispose();
     }
@@ -498,9 +543,6 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         await Future.wait([_loadProfile(), _loadRequest()]);
       },
       child: ListView(
-        // Reset the scrollable when the request changes status.
-        // Owner controls disappear on completion/cancellation, which can
-        // otherwise cause viewport offset correction loops in widget tests.
         key: ValueKey('request-details-${request.id}-${request.status}'),
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
@@ -551,6 +593,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             ),
           ],
 
+          // Existing offers and messaging functionality.
           if (_applicationUserId != null &&
               !_loadingProfile &&
               _profileError == null &&
@@ -559,8 +602,11 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             const SizedBox(height: 24),
             const Divider(),
             const SizedBox(height: 12),
+
             Text('Helper Offers', style: theme.textTheme.titleLarge),
+
             const SizedBox(height: 12),
+
             OutlinedButton.icon(
               key: const Key('open-offers'),
               onPressed: _updating ? null : _openOffers,
@@ -574,6 +620,49 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                           : 'View Offer & Messages')
                     : (isOwner ? 'Review Offers' : 'Offer to Help'),
               ),
+            ),
+          ],
+
+          // CCVO-70: Safety reporting controls.
+          if (_applicationUserId != null &&
+              !_loadingProfile &&
+              _profileError == null &&
+              !isOwner &&
+              (widget.reportRepository != null ||
+                  _repository is RequestService)) ...[
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 12),
+
+            Text('Community Safety', style: theme.textTheme.titleLarge),
+
+            const SizedBox(height: 8),
+
+            const Text(
+              'Report inappropriate content or behavior '
+              'to help keep Village Outreach safe.',
+            ),
+
+            const SizedBox(height: 12),
+
+            OutlinedButton.icon(
+              key: const Key('report-request'),
+              onPressed: _updating
+                  ? null
+                  : () => _openReport(ReportTargetType.request),
+              icon: const Icon(Icons.flag_outlined),
+              label: const Text('Report Request'),
+            ),
+
+            const SizedBox(height: 8),
+
+            OutlinedButton.icon(
+              key: const Key('report-user'),
+              onPressed: _updating
+                  ? null
+                  : () => _openReport(ReportTargetType.user),
+              icon: const Icon(Icons.person_off_outlined),
+              label: const Text('Report User'),
             ),
           ],
 
@@ -602,9 +691,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                       status: 'completed',
                       title: 'Mark Request Completed?',
                       message:
-                          'Are you sure you want to mark this '
-                          'request as completed? You will not '
-                          'be able to edit it afterward.',
+                          'Are you sure you want to mark '
+                          'this request as completed? '
+                          'You will not be able to edit '
+                          'it afterward.',
                       confirmLabel: 'Mark Completed',
                     ),
               icon: const Icon(Icons.check_circle_outline),
@@ -620,8 +710,9 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                       status: 'canceled',
                       title: 'Cancel Request?',
                       message:
-                          'Are you sure you want to cancel this '
-                          'request? This action cannot be undone.',
+                          'Are you sure you want to cancel '
+                          'this request? This action '
+                          'cannot be undone.',
                       confirmLabel: 'Cancel Request',
                     ),
               icon: const Icon(Icons.cancel_outlined),
@@ -629,7 +720,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             ),
           ],
 
-          // Wait for GET /users/me before determining ownership.
+          // Wait for GET /users/me.
           if (_loadingProfile) ...[
             const SizedBox(height: 24),
             const Center(
@@ -691,7 +782,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
           const SizedBox(height: 32),
 
-          // Developer diagnostics are hidden unless explicitly enabled.
+          // Optional developer diagnostics.
           if (_showOwnershipDiagnostics) ...[
             _buildDebugPanel(request),
             const SizedBox(height: 24),
