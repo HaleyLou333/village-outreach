@@ -162,7 +162,7 @@ void main() {
 
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('Home'), findsWidgets);
-    expect(find.text('Community'), findsWidgets);
+    expect(find.text('Resources'), findsWidgets);
     expect(find.text('Help'), findsWidgets);
     expect(find.text('Events'), findsWidgets);
     expect(find.text('Profile'), findsWidgets);
