@@ -45,3 +45,31 @@ class ResourceResponse(BaseModel):
     website: str | None
     source_url: str
     last_verified_at: datetime
+
+class ResourceCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    category: ResourceCategory
+    area: Area
+    address: str
+    latitude: Latitude
+    longitude: Longitude
+    phone: str | None = None
+    website: str | None = None
+    source_url: str
+    organization_id: UUID
+
+
+class ResourceUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = None
+    category: ResourceCategory | None = None
+    area: Area | None = None
+    address: str | None = None
+    latitude: Latitude | None = None
+    longitude: Longitude | None = None
+    phone: str | None = None
+    website: str | None = None
+    source_url: str | None = None

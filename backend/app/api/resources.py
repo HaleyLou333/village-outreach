@@ -8,8 +8,19 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.requests import CurrentUser, DatabaseSession
 from app.schemas.requests import RequestError
-from app.schemas.resources import ResourceQuery, ResourceResponse
-from app.services.resources import list_resources, resource_detail
+from app.schemas.resources import (
+    ResourceCreate,
+    ResourceQuery,
+    ResourceResponse,
+    ResourceUpdate,
+)
+from app.services.resources import (
+    create_resource,
+    disable_resource,
+    list_resources,
+    resource_detail,
+    update_resource,
+)
 
 router = APIRouter(
     prefix="/resources",
@@ -36,3 +47,65 @@ def get_resource(resource_id: UUID, user: CurrentUser, session: DatabaseSession)
     except SQLAlchemyError:
         session.rollback()
         raise HTTPException(503, "Resources are temporarily unavailable.") from None
+
+
+@router.post("", response_model=ResourceResponse, status_code=201)
+def post_resource(
+        data: ResourceCreate,
+        user: CurrentUser,
+        session: DatabaseSession,
+):
+    try:
+        return create_resource(
+            session,
+            user.id,
+            data,
+        )
+    except SQLAlchemyError:
+        session.rollback()
+        raise HTTPException(
+            503,
+            "Resources are temporarily unavailable.",
+        ) from None
+
+
+@router.patch("/{resource_id}", response_model=ResourceResponse)
+def patch_resource(
+        resource_id: UUID,
+        data: ResourceUpdate,
+        user: CurrentUser,
+        session: DatabaseSession,
+):
+    try:
+        return update_resource(
+            session,
+            resource_id,
+            user.id,
+            data,
+        )
+    except SQLAlchemyError:
+        session.rollback()
+        raise HTTPException(
+            503,
+            "Resources are temporarily unavailable.",
+        ) from None
+
+
+@router.delete("/{resource_id}", response_model=ResourceResponse)
+def delete_resource(
+        resource_id: UUID,
+        user: CurrentUser,
+        session: DatabaseSession,
+):
+    try:
+        return disable_resource(
+            session,
+            resource_id,
+            user.id,
+        )
+    except SQLAlchemyError:
+        session.rollback()
+        raise HTTPException(
+            503,
+            "Resources are temporarily unavailable.",
+        ) from None

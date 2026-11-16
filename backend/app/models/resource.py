@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, Float, Index, Text, Uuid, text
+from sqlalchemy import CheckConstraint, Float, ForeignKey, Index, Text, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -42,5 +42,9 @@ class Resource(Base):
     source_url: Mapped[str] = mapped_column(Text)
     last_verified_at: Mapped[datetime] = mapped_column(UTCDateTime())
     is_active: Mapped[bool] = mapped_column(server_default=text("true"))
+
     # CCVO-77 owns the future organization table and foreign key.
-    organization_id: Mapped[UUID | None] = mapped_column(Uuid)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("organizations.id"),
+    )
