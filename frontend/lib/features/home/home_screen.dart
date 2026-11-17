@@ -8,6 +8,7 @@ import '../requests/screens/request_detail_screen.dart';
 import '../requests/screens/request_form_screen.dart';
 import '../requests/services/request_service.dart';
 import '../requests/widgets/request_card.dart';
+import '../resources/screens/resource_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final RequestRepository? requestRepository;
@@ -436,11 +437,15 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: 0,
         onDestinationSelected: (index) {
+          if (index == 1) {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const ResourceScreen()),
+            );
+          }
+
           if (index == 4) {
             Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (context) => const ProfileScreen(),
-              ),
+              MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
             );
           }
         },
@@ -451,8 +456,9 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            label: 'Community',
+            icon: Icon(Icons.map_outlined),
+            selectedIcon: Icon(Icons.map),
+            label: 'Resources',
           ),
           NavigationDestination(
             icon: Icon(Icons.handshake_outlined),
