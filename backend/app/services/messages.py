@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.models import HelpRequest, Message
+from app.models import HelpRequest, Message, Notification
 from app.schemas.messages import MessageCreate, MessageResponse
 from app.services.offers import accepted_offer, locked_request, payload_hash
 
@@ -50,6 +50,7 @@ def create_message(
             return MessageResponse.model_validate(previous), False
         raise HTTPException(409, "Idempotency key was used for different data.")
     result = MessageResponse.model_validate(session.get(Message, inserted))
+    session.add(Notification(recipient_id=receiver, request_id=request.id, type="message_received"))
     session.commit()
     return result, True
 

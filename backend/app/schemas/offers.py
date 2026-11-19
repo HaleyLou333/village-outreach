@@ -23,3 +23,7 @@ class OfferResponse(BaseModel):
     message: str
     status: Literal["pending", "accepted", "declined", "withdrawn"]
     created_at: datetime
+
+
+class ListedOffer(OfferResponse):
+    helper_display_name: str | None

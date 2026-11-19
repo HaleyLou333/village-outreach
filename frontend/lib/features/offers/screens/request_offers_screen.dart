@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../messaging/screens/private_conversation_screen.dart';
 import '../../messaging/services/message_service.dart';
+import '../../profile/member_card.dart';
 import '../../requests/services/request_service.dart';
 
 import '../models/help_offer.dart';
@@ -35,6 +36,7 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
   final TextEditingController _messageController = TextEditingController();
 
   List<HelpOffer> _offers = [];
+  final _memberPreviews = <String, Future<MemberCard?>>{};
   HelpOffer? _myOffer;
   bool _loading = true;
   bool _busy = false;
@@ -71,7 +73,10 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
         );
 
         if (!mounted) return;
-        setState(() => _offers = offers);
+        setState(() {
+          _offers = offers;
+          _memberPreviews.clear();
+        });
       } else {
         final offer = await widget.repository.getMyOffer(
           requestId: widget.requestId,
@@ -185,6 +190,13 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
           currentUserId: widget.currentUserId,
           repository: repository,
           isClosed: widget.isClosed,
+          loadOtherMember: api == null
+              ? null
+              : () => MemberCard.load(
+                  api,
+                  widget.requestId,
+                  _isOwner ? offer.helperId : widget.requestOwnerId,
+                ),
         ),
       ),
     );
@@ -350,10 +362,44 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Offer ${index + 1}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  if (offer.helperDisplayName != null && widget.api != null)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: FutureBuilder<MemberCard?>(
+                        future: _memberPreviews.putIfAbsent(
+                          offer.helperId,
+                          () =>
+                              MemberCard.load(
+                                widget.api!,
+                                widget.requestId,
+                                offer.helperId,
+                              ).then<MemberCard?>(
+                                (card) => card,
+                                onError: (Object _) => null,
+                              ),
+                        ),
+                        builder: (context, snapshot) => MemberAvatar(
+                          name: offer.helperDisplayName!,
+                          photo: snapshot.data?.photo,
+                          badgeCount: snapshot.data?.badges.length ?? 0,
+                        ),
+                      ),
+                      title: Text(offer.helperDisplayName!),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => showMemberCard(
+                        context,
+                        MemberCard.load(
+                          widget.api!,
+                          widget.requestId,
+                          offer.helperId,
+                        ),
+                      ),
+                    )
+                  else
+                    Text(
+                      'Offer ${index + 1}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   const SizedBox(height: 8),
                   Text(offer.message),
                   const SizedBox(height: 8),

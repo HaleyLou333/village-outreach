@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -35,6 +36,65 @@ class ProfileService {
     final response = await _sendAuthenticated('GET', '/users/me');
 
     return _parseProfile(response);
+  }
+
+  bool? get isEmailConfirmed {
+    final user = _supabase.auth.currentUser;
+    return user == null ? null : user.emailConfirmedAt != null;
+  }
+
+  Future<Uint8List?> getPhoto() => _profilePhoto('GET');
+
+  Future<Uint8List?> uploadPhoto(Uint8List bytes) =>
+      _profilePhoto('PUT', body: {'photo': base64Encode(bytes)});
+
+  Future<void> removePhoto() async {
+    await _profilePhoto('DELETE');
+  }
+
+  Future<Uint8List?> _profilePhoto(
+    String method, {
+    Map<String, dynamic>? body,
+  }) async {
+    final response = await _sendAuthenticated(
+      method,
+      '/users/me/shared-photo',
+      body: body,
+    );
+    if (response.statusCode == 204) return null;
+    if (response.statusCode != 200) {
+      throw ProfileException(
+        'Could not access the profile photo.',
+        response.statusCode,
+      );
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final photo = data['photo'] as String?;
+    return photo == null ? null : base64Decode(photo);
+  }
+
+  Future<VolunteerProgress> getVolunteerProgress() async {
+    final response = await _sendAuthenticated(
+      'GET',
+      '/users/me/volunteer-progress',
+    );
+    if (response.statusCode != 200) {
+      throw ProfileException(
+        'Unable to load volunteer progress.',
+        response.statusCode,
+      );
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final next = data['next_badge'] as Map<String, dynamic>?;
+    return VolunteerProgress(
+      completedHelpCount: data['completed_help_count'] as int,
+      badgeLabels: [
+        for (final badge in data['earned_badges'] as List<dynamic>)
+          (badge as Map<String, dynamic>)['label'] as String,
+      ],
+      nextLabel: next?['label'] as String?,
+      nextTarget: next?['required_completions'] as int?,
+    );
   }
 
   Future<UserProfile> updateDisplayName(String displayName) async {
@@ -131,13 +191,13 @@ class ProfileService {
         if (body != null) 'Content-Type': 'application/json',
       };
 
-      if (method == 'PATCH') {
-        return await _http
-            .patch(uri, headers: headers, body: jsonEncode(body))
-            .timeout(requestTimeout);
-      }
-
-      return await _http.get(uri, headers: headers).timeout(requestTimeout);
+      final request = switch (method) {
+        'PATCH' => _http.patch(uri, headers: headers, body: jsonEncode(body)),
+        'PUT' => _http.put(uri, headers: headers, body: jsonEncode(body)),
+        'DELETE' => _http.delete(uri, headers: headers),
+        _ => _http.get(uri, headers: headers),
+      };
+      return await request.timeout(requestTimeout);
     } on TimeoutException {
       throw const ProfileException(
         'The profile request timed out. Please try again.',
@@ -176,4 +236,18 @@ class ProfileService {
   void dispose() {
     _http.close();
   }
+}
+
+class VolunteerProgress {
+  const VolunteerProgress({
+    required this.completedHelpCount,
+    required this.badgeLabels,
+    required this.nextLabel,
+    required this.nextTarget,
+  });
+
+  final int completedHelpCount;
+  final List<String> badgeLabels;
+  final String? nextLabel;
+  final int? nextTarget;
 }

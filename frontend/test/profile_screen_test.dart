@@ -35,6 +35,12 @@ class FakeAccountProfileService extends ProfileService {
 
   int loadCalls = 0;
   int saveCalls = 0;
+  VolunteerProgress progress = const VolunteerProgress(
+    completedHelpCount: 0,
+    badgeLabels: [],
+    nextLabel: 'First Help',
+    nextTarget: 1,
+  );
 
   FakeAccountProfileService()
     : super(
@@ -68,6 +74,9 @@ class FakeAccountProfileService extends ProfileService {
 
     return makeProfile();
   }
+
+  @override
+  Future<VolunteerProgress> getVolunteerProgress() async => progress;
 
   @override
   Future<UserProfile> updateDisplayName(String name) async {
@@ -172,6 +181,33 @@ Future<void> editName(WidgetTester tester, String name) async {
 // ============================================================
 
 void main() {
+  testWidgets(
+    'Volunteer progress shows the first goal and allows badge selection',
+    (tester) async {
+      final service = FakeAccountProfileService();
+      await openProfile(tester, service);
+      expect(find.text('Volunteer level 1'), findsOneWidget);
+      expect(find.text('Next badge: First Help (0/1)'), findsOneWidget);
+      expect(find.byType(ChoiceChip), findsNothing);
+
+      service.progress = const VolunteerProgress(
+        completedHelpCount: 5,
+        badgeLabels: ['First Help', 'Helping Hand'],
+        nextLabel: 'Community Helper',
+        nextTarget: 10,
+      );
+      await tester.tap(find.byTooltip('Refresh profile'));
+      await tester.pumpAndSettle();
+      expect(find.text('Volunteer level 3'), findsOneWidget);
+      expect(find.text('Next badge: Community Helper (5/10)'), findsOneWidget);
+      final firstHelp = find.widgetWithText(ChoiceChip, 'First Help');
+      await tester.ensureVisible(firstHelp);
+      await tester.tap(firstHelp);
+      await tester.pumpAndSettle();
+      expect(tester.widget<ChoiceChip>(firstHelp).selected, isTrue);
+    },
+  );
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('CCVO-70 Account Settings', () {

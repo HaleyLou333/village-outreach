@@ -3,6 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:village_outreach/features/home/home_screen.dart';
 import 'package:village_outreach/features/requests/models/help_request.dart';
 import 'package:village_outreach/features/requests/services/request_service.dart';
+import 'package:village_outreach/features/resources/services/location_service.dart';
+
+class FakeHomeLocation implements ResourceLocationRepository {
+  const FakeHomeLocation(this.result);
+
+  final ResourceLocationResult result;
+
+  @override
+  Future<ResourceLocationResult> getCurrentLocation() async => result;
+}
 
 /// Fake repository used to isolate HomeScreen widget tests
 /// from the real FastAPI backend and Supabase authentication.
@@ -63,7 +73,7 @@ class FakeRequestRepository implements RequestRepository {
 
 void main() {
   testWidgets(
-    'Posting in Mesa switches Nearby to Mesa and refresh removes a closed request',
+    'Posting uses approximate GPS coordinates and refresh preserves the search location',
     (tester) async {
       tester.view.physicalSize = const Size(414, 1000);
       tester.view.devicePixelRatio = 1;
@@ -71,16 +81,28 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       final repository = FakeRequestRepository();
       await tester.pumpWidget(
-        MaterialApp(home: HomeScreen(requestRepository: repository)),
+        MaterialApp(
+          home: HomeScreen(
+            requestRepository: repository,
+            locationRepository: const FakeHomeLocation(
+              ResourceLocationResult(
+                status: ResourceLocationStatus.available,
+                latitude: 35.471,
+                longitude: -97.521,
+              ),
+            ),
+          ),
+        ),
       );
       await tester.pumpAndSettle();
-      expect(repository.searchedLongitudes.single, -112.0740);
+      expect(repository.searchedLongitudes.single, -97.521);
+      expect(find.byType(DropdownButton), findsNothing);
 
       await tester.tap(find.text('Request Help'));
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byType(TextFormField).at(0),
-        'Mesa grocery pickup',
+        'Grocery pickup',
       );
       await tester.enterText(
         find.byType(TextFormField).at(1),
@@ -90,28 +112,34 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Food Assistance').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Area'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Downtown Mesa').last);
-      await tester.pumpAndSettle();
+      expect(find.text('Approximate current location'), findsOneWidget);
       await tester.tap(find.text('Submit Request'));
       await tester.pumpAndSettle();
 
-      expect(repository.searchedLongitudes.last, -111.8315);
-      expect(find.text('Mesa grocery pickup'), findsOneWidget);
+      expect(repository.searchedLongitudes.last, -97.521);
+      expect(repository.requests.single.longitude, -97.52);
+      expect(repository.requests.single.latitude, 35.47);
 
       // The next server response no longer includes a request closed elsewhere.
       repository.requests.clear();
       await tester.tap(find.byTooltip('Refresh nearby requests'));
       await tester.pumpAndSettle();
-      expect(repository.searchedLongitudes.last, -111.8315);
-      expect(find.text('Mesa grocery pickup'), findsNothing);
+      expect(repository.searchedLongitudes.last, -97.521);
     },
   );
 
   Future<void> loadHomeScreen(WidgetTester tester) async {
     await tester.pumpWidget(
-      MaterialApp(home: HomeScreen(requestRepository: FakeRequestRepository())),
+      MaterialApp(
+        home: HomeScreen(
+          requestRepository: FakeRequestRepository(),
+          locationRepository: const FakeHomeLocation(
+            ResourceLocationResult(
+              status: ResourceLocationStatus.permissionDenied,
+            ),
+          ),
+        ),
+      ),
     );
 
     await tester.pumpAndSettle();
@@ -144,10 +172,9 @@ void main() {
   testWidgets('Home screen handles an empty request feed', (tester) async {
     await loadHomeScreen(tester);
 
-    expect(
-      find.textContaining('No active requests found nearby'),
-      findsOneWidget,
-    );
+    final emptyState = find.textContaining('No active requests found nearby');
+    await tester.scrollUntilVisible(emptyState, 160);
+    expect(emptyState, findsOneWidget);
   });
 
   testWidgets('Home screen displays request filters', (tester) async {

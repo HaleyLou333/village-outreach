@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Query, Response
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.requests import CurrentUser, DatabaseSession, OperationKey
-from app.schemas.offers import OfferCreate, OfferResponse
+from app.schemas.offers import ListedOffer, OfferCreate, OfferResponse
 from app.schemas.requests import RequestError
 from app.services.offers import accept_offer, create_offer, list_offers
 
@@ -43,7 +43,7 @@ def post_offer(
         raise storage_failure(session) from None
 
 
-@router.get("/requests/{request_id}/offers", response_model=list[OfferResponse])
+@router.get("/requests/{request_id}/offers", response_model=list[ListedOffer])
 def get_offers(
     request_id: UUID,
     user: CurrentUser,

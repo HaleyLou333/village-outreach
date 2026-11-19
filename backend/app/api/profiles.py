@@ -6,12 +6,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
 from app.database.session import get_session
-from app.models import User
+from app.models import HelpRequest, Offer, User
 
 
 class ProfileResponse(BaseModel):
@@ -45,6 +46,47 @@ class ProfileError(BaseModel):
     detail: str
 
 
+class ParticipationResponse(BaseModel):
+    completed_assistance_count: int
+    definition: str = (
+        "Completed requests with an accepted helper, counted once per request where this member "
+        "was the requester or accepted helper. This measures participation only and provides "
+        "no identity verification or safety guarantee."
+    )
+
+
+class VolunteerBadge(BaseModel):
+    id: str
+    label: str
+    required_completions: int
+
+
+class VolunteerProgress(BaseModel):
+    completed_help_count: int
+    earned_badges: list[VolunteerBadge]
+    next_badge: VolunteerBadge | None
+
+
+VOLUNTEER_MILESTONES = (
+    VolunteerBadge(id="first_help", label="First Help", required_completions=1),
+    VolunteerBadge(id="helping_hand", label="Helping Hand", required_completions=5),
+    VolunteerBadge(id="community_helper", label="Community Helper", required_completions=10),
+)
+
+
+def completed_help_query(user_id):
+    return (
+        select(func.count(func.distinct(HelpRequest.id)))
+        .join(Offer, Offer.request_id == HelpRequest.id)
+        .where(
+            HelpRequest.status == "completed",
+            Offer.status == "accepted",
+            Offer.helper_id == user_id,
+            HelpRequest.requester_id != user_id,
+        )
+    )
+
+
 router = APIRouter(
     prefix="/users",
     tags=["Profile"],
@@ -64,6 +106,57 @@ DatabaseSession = Annotated[Session, Depends(get_session)]
 @router.get("/me", response_model=ProfileResponse)
 def read_profile(user: CurrentUser) -> User:
     return user
+
+
+@router.get("/me/volunteer-progress", response_model=VolunteerProgress)
+def read_volunteer_progress(user: CurrentUser, session: DatabaseSession) -> VolunteerProgress:
+    """Return private recognition earned as the accepted helper on completed requests."""
+    try:
+        count = session.scalar(completed_help_query(user.id))
+    except SQLAlchemyError:
+        session.rollback()
+        raise HTTPException(503, "Volunteer progress is temporarily unavailable.") from None
+    return VolunteerProgress(
+        completed_help_count=count,
+        earned_badges=[
+            badge for badge in VOLUNTEER_MILESTONES if badge.required_completions <= count
+        ],
+        next_badge=next(
+            (badge for badge in VOLUNTEER_MILESTONES if badge.required_completions > count), None
+        ),
+    )
+
+
+@router.get(
+    "/{user_id}/participation",
+    response_model=ParticipationResponse,
+    responses={404: {"model": ProfileError, "description": "Active profile not found"}},
+)
+def read_participation(
+    user_id: UUID, user: CurrentUser, session: DatabaseSession
+) -> ParticipationResponse:
+    """Return the public participation indicator for an active member."""
+    completed = (
+        select(func.count(func.distinct(HelpRequest.id)))
+        .join(Offer, Offer.request_id == HelpRequest.id)
+        .where(
+            HelpRequest.status == "completed",
+            Offer.status == "accepted",
+            or_(HelpRequest.requester_id == User.id, Offer.helper_id == User.id),
+        )
+        .correlate(User)
+        .scalar_subquery()
+    )
+    try:
+        count = session.scalar(
+            select(completed).select_from(User).where(User.id == user_id, User.status == "active")
+        )
+    except SQLAlchemyError:
+        session.rollback()
+        raise HTTPException(503, "Participation data is temporarily unavailable.") from None
+    if count is None:
+        raise HTTPException(404, "Active profile not found.")
+    return ParticipationResponse(completed_assistance_count=count)
 
 
 @router.patch(

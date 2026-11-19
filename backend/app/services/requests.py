@@ -11,7 +11,14 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.models import HelpRequest
-from app.schemas.requests import FeedRequestResponse, RequestCreate, RequestResponse, RequestUpdate
+from app.schemas.requests import (
+    Category,
+    FeedRequestResponse,
+    RequestCreate,
+    RequestResponse,
+    RequestUpdate,
+    Urgency,
+)
 
 EARTH_RADIUS_KM = 6371.0088
 
@@ -89,13 +96,26 @@ def great_circle_distance(row_latitude, row_longitude, latitude: float, longitud
 
 
 def request_feed(
-    session: Session, latitude: float, longitude: float, radius_km: float, limit: int, offset: int
+    session: Session,
+    latitude: float,
+    longitude: float,
+    radius_km: float,
+    limit: int,
+    offset: int,
+    *,
+    category: Category | None = None,
+    urgency: Urgency | None = None,
 ) -> list[FeedRequestResponse]:
     distance = distance_expression(latitude, longitude).label("distance_km")
+    query = select(HelpRequest, distance).where(
+        HelpRequest.status == "active", distance <= radius_km
+    )
+    if category is not None:
+        query = query.where(HelpRequest.category == category)
+    if urgency is not None:
+        query = query.where(HelpRequest.urgency == urgency)
     rows = session.execute(
-        select(HelpRequest, distance)
-        .where(HelpRequest.status == "active", distance <= radius_km)
-        .order_by(distance.asc(), HelpRequest.created_at.desc(), HelpRequest.id.asc())
+        query.order_by(distance.asc(), HelpRequest.created_at.desc(), HelpRequest.id.asc())
         .limit(limit)
         .offset(offset)
     )

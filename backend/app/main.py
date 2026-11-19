@@ -7,19 +7,25 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.api.member_cards import router as member_card_router
 from app.api.messages import router as message_router
+from app.api.notifications import router as notification_router
 from app.api.offers import router as offer_router
 from app.api.profiles import router as profile_router
 from app.api.reports import router as report_router
 from app.api.requests import router as request_router
+from app.api.resource_guides import router as resource_guide_router
 from app.api.resources import router as resource_router
 
 app = FastAPI(title="CCVO Backend", version="0.1.0")
 app.include_router(profile_router)
+app.include_router(member_card_router)
 app.include_router(request_router)
 app.include_router(offer_router)
 app.include_router(message_router)
+app.include_router(notification_router)
 app.include_router(resource_router)
+app.include_router(resource_guide_router)
 app.include_router(report_router)
 logger = logging.getLogger("app.http")
 
@@ -30,7 +36,16 @@ async def request_context(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Request-ID"] = request_id
     if request.url.path.startswith(
-        ("/requests", "/users", "/offers", "/messages", "/resources", "/reports")
+        (
+            "/requests",
+            "/users",
+            "/offers",
+            "/messages",
+            "/resources",
+            "/reports",
+            "/notifications",
+            "/resource-guides",
+        )
     ):
         response.headers["Cache-Control"] = "no-store"
     logger.info(

@@ -101,7 +101,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   }
 
   void _logOwnership(HelpRequest request) {
-    if (!kDebugMode) return;
+    if (!_showOwnershipDiagnostics) return;
 
     debugPrint(_diagnostics(request));
   }
@@ -150,7 +150,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         _loadingProfile = false;
       });
 
-      if (kDebugMode) {
+      if (_showOwnershipDiagnostics) {
         debugPrint('Application profile loaded: ${profile.id}');
       }
 

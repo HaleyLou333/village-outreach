@@ -47,3 +47,28 @@ def test_duplicate_source_in_manifest_is_rejected(tmp_path):
     path.write_text(json.dumps([data[0], data[0]]), encoding="utf-8")
     with pytest.raises(ValueError, match="Duplicate source URL"):
         load_seed(path)
+
+
+def test_gps_search_stays_local_with_multiple_metro_catalogs(db_session):
+    from scripts.seed_resources import SEED_PATH, load_seed, seed_resources
+
+    orlando = load_seed(SEED_PATH.with_name("orlando_resources.json"))
+    records = [
+        record.model_copy(update={"last_verified_at": datetime.now(UTC)})
+        for record in [*load_seed(), *orlando]
+    ]
+    assert seed_resources(db_session, records) == len(records)
+
+    def nearby(latitude, longitude):
+        return list_resources(
+            db_session,
+            ResourceQuery(latitude=latitude, longitude=longitude, radius_km=25),
+        )
+
+    assert {record.name for record in nearby(28.5422, -81.3774)} == {
+        record.name for record in orlando
+    }
+    okc = nearby(35.4374, -97.5186)
+    assert {record.area for record in okc} == {"Oklahoma City Metro"}
+    assert any(record.name == "Capitol Hill Library" for record in okc)
+    assert nearby(25.7617, -80.1918) == []

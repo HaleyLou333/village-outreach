@@ -14,6 +14,7 @@ class RequestArea {
 }
 
 const requestAreas = [
+  RequestArea('Oklahoma City Metro', 35.4676, -97.5164),
   RequestArea('Central Phoenix', 33.4484, -112.0740),
   RequestArea('Downtown Tempe', 33.4255, -111.9400),
   RequestArea('Downtown Mesa', 33.4152, -111.8315),
@@ -31,11 +32,13 @@ const requestCategories = {
 class RequestFormScreen extends StatefulWidget {
   final HelpRequest? existingRequest;
   final RequestRepository? requestRepository;
+  final RequestArea? nearbyArea;
 
   const RequestFormScreen({
     super.key,
     this.existingRequest,
     this.requestRepository,
+    this.nearbyArea,
   });
 
   @override
@@ -85,7 +88,8 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
         ...requestAreas.where((area) => area.name != existing.area),
       ];
     } else {
-      _availableAreas = [...requestAreas];
+      _area = widget.nearbyArea;
+      _availableAreas = _area == null ? requestAreas : [_area!];
     }
   }
 
@@ -356,26 +360,35 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
 
               const SizedBox(height: 24),
 
-              DropdownButtonFormField<RequestArea>(
-                // Updated for current Flutter versions.
-                initialValue: _area,
-                decoration: const InputDecoration(
-                  labelText: 'Area',
-                  border: OutlineInputBorder(),
+              if (widget.nearbyArea != null && !_isEditing)
+                const ListTile(
+                  leading: Icon(Icons.location_on_outlined),
+                  title: Text('Approximate current location'),
+                )
+              else
+                DropdownButtonFormField<RequestArea>(
+                  // Updated for current Flutter versions.
+                  initialValue: _area,
+                  decoration: const InputDecoration(
+                    labelText: 'Area',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _availableAreas
+                      .map(
+                        (area) => DropdownMenuItem(
+                          value: area,
+                          child: Text(area.name),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: _saving
+                      ? null
+                      : (value) {
+                          setState(() => _area = value);
+                        },
+                  validator: (value) =>
+                      value == null ? 'Select an area.' : null,
                 ),
-                items: _availableAreas
-                    .map(
-                      (area) =>
-                          DropdownMenuItem(value: area, child: Text(area.name)),
-                    )
-                    .toList(),
-                onChanged: _saving
-                    ? null
-                    : (value) {
-                        setState(() => _area = value);
-                      },
-                validator: (value) => value == null ? 'Select an area.' : null,
-              ),
 
               const SizedBox(height: 12),
 
