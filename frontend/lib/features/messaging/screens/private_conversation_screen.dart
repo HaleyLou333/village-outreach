@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../profile/member_card.dart';
 import '../models/private_message.dart';
 import '../services/message_service.dart';
 
@@ -12,6 +13,7 @@ class PrivateConversationScreen extends StatefulWidget {
     required this.repository,
     required this.isClosed,
     this.pageSize = 20,
+    this.loadOtherMember,
   });
 
   final String requestId;
@@ -19,6 +21,7 @@ class PrivateConversationScreen extends StatefulWidget {
   final MessageRepository repository;
   final bool isClosed;
   final int pageSize;
+  final Future<MemberCard> Function()? loadOtherMember;
 
   @override
   State<PrivateConversationScreen> createState() =>
@@ -35,6 +38,7 @@ class _PrivateConversationScreenState extends State<PrivateConversationScreen> {
   String? _error;
   bool _accessDenied = false;
   bool _closedByServer = false;
+  Future<MemberCard?>? _otherMember;
 
   bool get _isClosed => widget.isClosed || _closedByServer;
   bool get _sending => _messages.any(
@@ -44,6 +48,10 @@ class _PrivateConversationScreenState extends State<PrivateConversationScreen> {
   @override
   void initState() {
     super.initState();
+    _otherMember = widget.loadOtherMember?.call().then<MemberCard?>(
+      (card) => card,
+      onError: (Object _) => null,
+    );
     _loadInitial();
   }
 
@@ -221,7 +229,30 @@ class _PrivateConversationScreenState extends State<PrivateConversationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Private Conversation'),
+        title: FutureBuilder<MemberCard?>(
+          future: _otherMember,
+          builder: (context, snapshot) {
+            final member = snapshot.data;
+            if (member == null || _accessDenied) {
+              return const Text('Private Conversation');
+            }
+            return TextButton.icon(
+              onPressed: () =>
+                  showMemberCard(context, widget.loadOtherMember!()),
+              icon: MemberAvatar(
+                name: member.name,
+                photo: member.photo,
+                badgeCount: member.badges.length,
+                radius: 14,
+              ),
+              label: Text(
+                member.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          },
+        ),
         actions: [
           IconButton(
             tooltip: 'Refresh messages',

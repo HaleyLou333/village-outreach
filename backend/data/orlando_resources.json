@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Orlando Public Library",
+    "category": "library",
+    "area": "Orlando",
+    "address": "101 E Central Blvd, Orlando, FL 32801",
+    "latitude": 28.542211,
+    "longitude": -81.377396,
+    "phone": "407-835-7323",
+    "website": "https://ocls.org/locations-hours/orlando-public-library/",
+    "source_url": "https://ocls.org/locations-hours/orlando-public-library/",
+    "last_verified_at": "2026-11-17T00:00:00Z"
+  },
+  {
+    "name": "South Trail Branch",
+    "category": "library",
+    "area": "Orlando",
+    "address": "4600 S Orange Blossom Trail, Orlando, FL 32839",
+    "latitude": 28.496279,
+    "longitude": -81.396916,
+    "phone": "407-835-7323",
+    "website": "https://ocls.org/locations-hours/south-trail-branch/",
+    "source_url": "https://ocls.org/locations-hours/south-trail-branch/",
+    "last_verified_at": "2026-11-17T00:00:00Z"
+  },
+  {
+    "name": "South Creek Branch",
+    "category": "library",
+    "area": "Orlando",
+    "address": "1702 Deerfield Blvd, Orlando, FL 32837",
+    "latitude": 28.378499,
+    "longitude": -81.400693,
+    "phone": "407-835-7323",
+    "website": "https://ocls.org/locations-hours/south-creek-branch/",
+    "source_url": "https://ocls.org/locations-hours/south-creek-branch/",
+    "last_verified_at": "2026-11-17T00:00:00Z"
+  }
+]

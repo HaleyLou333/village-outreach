@@ -1,4 +1,4 @@
-"""Validate and optionally insert the curated Sprint 4 resource dataset."""
+"""Validate and optionally insert a curated resource dataset."""
 
 import argparse
 from datetime import UTC, datetime
@@ -89,10 +89,11 @@ def seed_resources(session: Session, records: list[SeedResource]) -> int:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--file", type=Path, default=SEED_PATH, help="Curated JSON dataset.")
     parser.add_argument("--apply", action="store_true", help="Insert into the configured database.")
     args = parser.parse_args()
     try:
-        records = load_seed()
+        records = load_seed(args.file)
         if not args.apply:
             print(f"Validated {len(records)} curated listings.")
             return

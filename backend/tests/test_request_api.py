@@ -198,6 +198,8 @@ def test_invalid_patch_does_not_change_row(request_client, claims, signing_key, 
         {"latitude": 0, "longitude": 0, "radius_km": 101},
         {"latitude": 0, "longitude": 0, "limit": 101},
         {"latitude": 0, "longitude": 0, "offset": 10001},
+        {"latitude": 0, "longitude": 0, "category": "food"},
+        {"latitude": 0, "longitude": 0, "urgency": "urgent"},
     ],
 )
 def test_invalid_feed_query(request_client, claims, signing_key, params):
@@ -294,6 +296,50 @@ def test_distance_filter_handles_boundaries_dateline_poles(
                 )
                 assert boundary.status_code == 200
                 assert (request_id in {row["id"] for row in boundary.json()}) == included
+
+
+def test_feed_combines_filters_before_pagination(request_client, claims, signing_key):
+    cases = [
+        {"latitude": 0, "longitude": 0},
+        {"latitude": 0, "longitude": 0.01},
+        {"latitude": 0, "longitude": 0.5},
+        {"latitude": 0, "longitude": 0, "category": "TRANSPORTATION"},
+        {"latitude": 0, "longitude": 0, "urgency": "standard"},
+        {"latitude": 0, "longitude": 0},
+    ]
+    ids = []
+    for index, changes in enumerate(cases):
+        response = request_client.post(
+            "/requests",
+            headers=headers(claims, signing_key, f"filter-case-{index}"),
+            json=payload(**({"urgency": "time_sensitive"} | changes)),
+        )
+        assert response.status_code == 201
+        ids.append(response.json()["id"])
+
+    auth = headers(claims, signing_key)
+    assert (
+        request_client.patch(
+            f"/requests/{ids[-1]}", headers=auth, json={"status": "completed"}
+        ).status_code
+        == 200
+    )
+    center = {"latitude": 0, "longitude": 0}
+    filters = center | {
+        "category": "FOOD_ASSISTANCE",
+        "urgency": "time_sensitive",
+        "radius_km": 2,
+        "limit": 1,
+    }
+    for offset, expected in enumerate([[ids[0]], [ids[1]], []]):
+        response = request_client.get(
+            "/requests", headers=auth, params=filters | {"offset": offset}
+        )
+        assert response.status_code == 200
+        assert [row["id"] for row in response.json()] == expected
+    assert {
+        row["id"] for row in request_client.get("/requests", headers=auth, params=center).json()
+    } == {ids[0], ids[1], ids[3], ids[4]}
 
 
 def test_feed_pagination_is_deterministic(request_client, claims, signing_key):

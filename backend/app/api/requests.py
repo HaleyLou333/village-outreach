@@ -11,6 +11,7 @@ from app.auth.dependencies import get_current_user
 from app.database.session import get_session
 from app.models import User
 from app.schemas.requests import (
+    Category,
     FeedRequestResponse,
     Latitude,
     Longitude,
@@ -18,6 +19,7 @@ from app.schemas.requests import (
     RequestError,
     RequestResponse,
     RequestUpdate,
+    Urgency,
 )
 from app.services.requests import create_request, request_detail, request_feed, update_request
 
@@ -70,12 +72,36 @@ def get_requests(
     session: DatabaseSession,
     latitude: Latitude,
     longitude: Longitude,
-    radius_km: Annotated[float, Query(gt=0, le=100, allow_inf_nan=False)] = 10,
+    radius_km: Annotated[
+        float,
+        Query(
+            gt=0,
+            le=100,
+            allow_inf_nan=False,
+            description="Radius in kilometers around the supplied point. Omit to reset to 10 km.",
+        ),
+    ] = 10,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0, le=10000)] = 0,
+    category: Annotated[
+        Category | None, Query(description="Omit to include all categories.")
+    ] = None,
+    urgency: Annotated[
+        Urgency | None, Query(description="Omit to include all urgency levels.")
+    ] = None,
 ) -> list[FeedRequestResponse]:
+    """List active nearby requests that match all selected filters before pagination."""
     try:
-        return request_feed(session, latitude, longitude, radius_km, limit, offset)
+        return request_feed(
+            session,
+            latitude,
+            longitude,
+            radius_km,
+            limit,
+            offset,
+            category=category,
+            urgency=urgency,
+        )
     except SQLAlchemyError:
         raise storage_failure(session) from None
 

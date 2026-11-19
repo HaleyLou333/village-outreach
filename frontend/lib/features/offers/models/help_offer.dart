@@ -8,6 +8,7 @@ class HelpOffer {
     required this.message,
     required this.status,
     required this.createdAt,
+    this.helperDisplayName,
   });
 
   final String id;
@@ -16,6 +17,7 @@ class HelpOffer {
   final String message;
   final OfferStatus status;
   final DateTime createdAt;
+  final String? helperDisplayName;
 
   factory HelpOffer.fromJson(Map<String, dynamic> json) => HelpOffer(
     id: json['id'] as String,
@@ -24,6 +26,7 @@ class HelpOffer {
     message: json['message'] as String,
     status: OfferStatus.values.byName(json['status'] as String),
     createdAt: DateTime.parse(json['created_at'] as String),
+    helperDisplayName: json['helper_display_name'] as String?,
   );
 
   HelpOffer copyWith({OfferStatus? status}) {
@@ -34,6 +37,7 @@ class HelpOffer {
       message: message,
       status: status ?? this.status,
       createdAt: createdAt,
+      helperDisplayName: helperDisplayName,
     );
   }
 }

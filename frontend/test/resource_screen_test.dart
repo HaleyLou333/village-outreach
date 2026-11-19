@@ -158,9 +158,9 @@ void main() {
       expect(repository.lastArea, isNull);
       expect(repository.lastLatitude, 35.4676);
       expect(repository.lastLongitude, -97.5164);
-      expect(repository.lastRadius, 10);
+      expect(repository.lastRadius, 25);
 
-      expect(find.text('Showing resources within 10 km'), findsOneWidget);
+      expect(find.text('Showing resources within 25 km'), findsOneWidget);
     });
 
     testWidgets('Denied location preserves manual resource access', (

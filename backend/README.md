@@ -333,7 +333,7 @@ rounding does not redact information a user types into title/description/area.
 ### Nearby browsing and manual selection
 
 ```http
-GET /requests?latitude=35.12&longitude=-97.65&radius_km=10&limit=20&offset=0
+GET /requests?latitude=35.12&longitude=-97.65&radius_km=10&category=FOOD_ASSISTANCE&urgency=time_sensitive&limit=20&offset=0
 Authorization: Bearer <access-token>
 ```
 
@@ -547,3 +547,59 @@ References: [Final SDD](https://docs.google.com/document/d/1jHAX5MNiE9HQ4lKZ0HHI
 [Supabase connections](https://supabase.com/docs/guides/database/connecting-to-postgres),
 [psycopg prepared statements](https://www.psycopg.org/psycopg3/docs/advanced/prepare.html),
 [SQLAlchemy test transactions](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites).
+
+## Sprint 5 API contracts
+
+- `GET /requests/{request_id}/members/{member_id}` exposes the member card to
+  the requester for pending or accepted offers and to the accepted helper
+  for the requester. `GET`, `PUT` and `DELETE /users/me/shared-photo` view,
+  share and remove the signed-in member's photo. The API resizes the photo
+  and strips metadata before storing it in `app_private.profile_photos`.
+  A separate runtime role needs SELECT, INSERT, UPDATE and DELETE on that table.
+- `GET /requests` accepts optional `category` and `urgency`. Omit both to reset
+  them and omit `radius_km` to reset the distance to 10 km. Reset pagination
+  to offset zero when changing filters.
+- `GET /notifications` returns the signed-in member's inbox. Events carry a
+  request ID and type. Unread events appear first, then read events. Each
+  group sorts newest first. `PATCH /notifications/{id}/read` sets the read
+  timestamp and returns the same timestamp on retries. A separate runtime
+  role needs SELECT, INSERT and UPDATE on `app_private.notifications`.
+- `GET /users/{id}/participation` returns the aggregate and its definition to
+  signed-in members. Each completed request with an accepted offer counts
+  once for the requester and once for the accepted helper.
+- `GET /resource-guides` lists published guides with optional `category`,
+  case-insensitive `area`, `limit` and `offset`. The detail route
+  `GET /resource-guides/{id}` includes the guide body. Both return the source
+  URL and review timestamp. Release operators maintain drafts and published
+  content in `app_private.resource_guides`. Give a separate API runtime role
+  SELECT on that table. Set `reviewed_at` after checking the source before
+  publishing.
+
+## Vercel beta API deployment (CCVO-60)
+
+Use the FastAPI framework preset and set the Vercel project root directory to
+`backend`. The Python 3.13 project manifest declares the Vercel entry point and
+runtime dependencies. When changing a runtime dependency, keep the version in
+`pyproject.toml` and `requirements.txt` aligned.
+
+For the beta environment, configure these server-side Vercel variables:
+
+| Variable | Value |
+| --- | --- |
+| `ENVIRONMENT` | `development` for the beta preview |
+| `SUPABASE_URL` | HTTPS origin of the Supabase project used by the beta Android build |
+| `DATABASE_URL` | Runtime-role transaction pooler URL for that database |
+
+Configure production credentials in the Production environment only.
+Keep `MIGRATION_DATABASE_URL` in the release operator's environment. Apply
+reviewed migrations from the matching Git revision before deployment and
+confirm `python -m alembic current` reports the expected head. The FastAPI
+startup and request handlers do not run migrations.
+
+After each beta deployment, check `GET /health` for HTTP 200, then check
+`GET /users/me` with an invalid bearer token for HTTP 401. Sign in with a
+dedicated beta test account and check the same profile endpoint for HTTP 200.
+Use the tested HTTPS origin as Flutter's `API_BASE_URL`. Record the deployment
+ID, revision, and smoke-test results. Use Vercel's build and runtime logs to
+diagnose failures. To recover, redeploy the last verified compatible revision
+to the same environment and repeat the smoke checks.
