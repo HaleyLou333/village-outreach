@@ -79,6 +79,8 @@ class FakeRequestRepository implements RequestRepository {
     required double latitude,
     required double longitude,
     double radiusKm = 10,
+    String? category,
+    String? urgency,
     int limit = 20,
     int offset = 0,
   }) async {

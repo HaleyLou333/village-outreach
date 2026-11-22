@@ -30,6 +30,8 @@ abstract class RequestRepository {
     required double latitude,
     required double longitude,
     double radiusKm = 10,
+    String? category,
+    String? urgency,
     int limit = 20,
     int offset = 0,
   });
@@ -80,6 +82,7 @@ class RequestService implements RequestRepository {
       body: body,
       additionalHeaders: {'Idempotency-Key': ?idempotencyKey},
     );
+
     try {
       return jsonDecode(response.body);
     } on FormatException {
@@ -89,15 +92,69 @@ class RequestService implements RequestRepository {
     }
   }
 
-  /// Retrieves active requests near the supplied coordinates.
+  /// Retrieves active requests matching all selected filters.
+  ///
+  /// Category and urgency are optional. When omitted, the API
+  /// returns all categories and urgency levels.
+  ///
+  /// The default search radius is 10 km.
+  ///
+  /// Filtering is performed by the backend before pagination.
   @override
   Future<List<HelpRequest>> getNearbyRequests({
     required double latitude,
     required double longitude,
     double radiusKm = 10,
+    String? category,
+    String? urgency,
     int limit = 20,
     int offset = 0,
   }) async {
+    const validCategories = {
+      'FOOD_ASSISTANCE',
+      'TRANSPORTATION',
+      'CHILDCARE',
+      'DONATED_ITEMS',
+      'DELIVERY_HELP',
+      'LOCAL_SERVICES',
+    };
+
+    const validUrgencies = {'standard', 'time_sensitive'};
+
+    // Validate coordinates.
+    if (!latitude.isFinite || latitude < -90 || latitude > 90) {
+      throw const RequestApiException('Invalid latitude.');
+    }
+
+    if (!longitude.isFinite || longitude < -180 || longitude > 180) {
+      throw const RequestApiException('Invalid longitude.');
+    }
+
+    // Match the backend radius constraints.
+    if (!radiusKm.isFinite || radiusKm <= 0 || radiusKm > 100) {
+      throw const RequestApiException(
+        'Distance must be greater than 0 and no more than 100 km.',
+      );
+    }
+
+    // Validate category and urgency before sending the request.
+    if (category != null && !validCategories.contains(category)) {
+      throw const RequestApiException('Invalid request category.');
+    }
+
+    if (urgency != null && !validUrgencies.contains(urgency)) {
+      throw const RequestApiException('Invalid request urgency.');
+    }
+
+    // Match the backend pagination constraints.
+    if (limit < 1 || limit > 100) {
+      throw const RequestApiException('Page size must be between 1 and 100.');
+    }
+
+    if (offset < 0 || offset > 10000) {
+      throw const RequestApiException('Invalid pagination offset.');
+    }
+
     final uri = _buildUri(
       '/requests',
       queryParameters: {
@@ -106,13 +163,17 @@ class RequestService implements RequestRepository {
         'radius_km': radiusKm.toString(),
         'limit': limit.toString(),
         'offset': offset.toString(),
+        'category': ?category,
+        'urgency': ?urgency,
       },
     );
 
-    debugPrint('========== NEARBY REQUESTS ==========');
+    debugPrint('========== FILTERED REQUEST FEED ==========');
     debugPrint('Latitude: $latitude');
     debugPrint('Longitude: $longitude');
     debugPrint('Radius: $radiusKm km');
+    debugPrint('Category: ${category ?? "All"}');
+    debugPrint('Urgency: ${urgency ?? "All"}');
     debugPrint('Limit: $limit');
     debugPrint('Offset: $offset');
 
@@ -134,11 +195,11 @@ class RequestService implements RequestRepository {
           .toList();
 
       debugPrint('Requests returned: ${requests.length}');
-      debugPrint('=====================================');
+      debugPrint('===========================================');
 
       return requests;
     } catch (error) {
-      debugPrint('Failed to parse nearby requests: $error');
+      debugPrint('Failed to parse request feed: $error');
 
       throw const RequestApiException(
         'The server returned an unexpected requests response.',
@@ -344,6 +405,7 @@ class RequestService implements RequestRepository {
         if (_supabase.auth.currentSession?.user.id != session?.user.id) {
           throw const RequestApiException('The signed-in account changed.');
         }
+
         final refreshed = await _supabase.auth.refreshSession();
 
         token = refreshed.session?.accessToken;
@@ -365,6 +427,7 @@ class RequestService implements RequestRepository {
 
       try {
         response = await send(token);
+
         debugPrint('HTTP status after refresh: ${response.statusCode}');
       } catch (error) {
         debugPrint('NETWORK ERROR after token refresh: $error');
@@ -377,6 +440,7 @@ class RequestService implements RequestRepository {
     }
 
     debugPrint('Final HTTP status: ${response.statusCode}');
+
     debugPrint(
       'Response content type: '
       '${response.headers['content-type'] ?? 'unknown'}',
@@ -384,6 +448,7 @@ class RequestService implements RequestRepository {
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       debugPrint('API request completed successfully.');
+
       return response;
     }
 

@@ -25,7 +25,55 @@ class _HomeScreenState extends State<HomeScreen> {
   final _nearbySection = GlobalKey();
 
   RequestArea _searchArea = requestAreas.first;
+  String? _category;
+  String? _urgency;
+  double _radiusKm = 10;
+  int _nextOffset = 0;
   int _feedGeneration = 0;
+
+  static const Map<String, String> _categories = {
+    'FOOD_ASSISTANCE': 'Food Assistance',
+    'TRANSPORTATION': 'Transportation',
+    'CHILDCARE': 'Childcare',
+    'DONATED_ITEMS': 'Donated Items',
+    'DELIVERY_HELP': 'Delivery Help',
+    'LOCAL_SERVICES': 'Local Services',
+  };
+
+  bool get _hasActiveFilters =>
+      _searchArea != requestAreas.first ||
+      _category != null ||
+      _urgency != null ||
+      _radiusKm != 10;
+
+  void _resetFilters() {
+    if (!_hasActiveFilters) return;
+    setState(() {
+      _searchArea = requestAreas.first;
+      _category = null;
+      _urgency = null;
+      _radiusKm = 10;
+    });
+    _loadRequests();
+  }
+
+  void _changeCategory(String? category) {
+    if (category == _category) return;
+    setState(() => _category = category);
+    _loadRequests();
+  }
+
+  void _changeUrgency(String? urgency) {
+    if (urgency == _urgency) return;
+    setState(() => _urgency = urgency);
+    _loadRequests();
+  }
+
+  void _changeRadius(double? radius) {
+    if (radius == null || radius == _radiusKm) return;
+    setState(() => _radiusKm = radius);
+    _loadRequests();
+  }
 
   late final RequestRepository _requestService;
   late final bool _ownsService;
@@ -61,12 +109,17 @@ class _HomeScreenState extends State<HomeScreen> {
       _loadingMore = false;
       _error = null;
       _loadMoreError = null;
+      _nextOffset = 0;
+      _hasMore = true;
     });
 
     try {
       final results = await _requestService.getNearbyRequests(
         latitude: searchArea.latitude,
         longitude: searchArea.longitude,
+        radiusKm: _radiusKm,
+        category: _category,
+        urgency: _urgency,
         limit: _pageSize,
         offset: 0,
       );
@@ -78,6 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ..clear()
           ..addAll(results);
 
+        _nextOffset = results.length;
         _hasMore = results.length == _pageSize;
         _loading = false;
       });
@@ -105,8 +159,11 @@ class _HomeScreenState extends State<HomeScreen> {
       final results = await _requestService.getNearbyRequests(
         latitude: _searchArea.latitude,
         longitude: _searchArea.longitude,
+        radiusKm: _radiusKm,
+        category: _category,
+        urgency: _urgency,
         limit: _pageSize,
-        offset: _requests.length,
+        offset: _nextOffset,
       );
 
       if (!mounted || generation != _feedGeneration) return;
@@ -115,6 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final existingIds = _requests.map((r) => r.id).toSet();
 
         _requests.addAll(results.where((r) => !existingIds.contains(r.id)));
+        _nextOffset += results.length;
 
         _hasMore = results.length == _pageSize;
         _loadingMore = false;
@@ -236,13 +294,27 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (_requests.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 32),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32),
         child: Center(
-          child: Text(
-            'No active requests found nearby.\n'
-            'Try another area or check back later.',
-            textAlign: TextAlign.center,
+          child: Column(
+            children: [
+              Text(
+                _hasActiveFilters
+                    ? 'No requests match your filters.\nTry changing your selections or clear all filters.'
+                    : 'No active requests found nearby.\nTry another area or check back later.',
+                textAlign: TextAlign.center,
+              ),
+              if (_hasActiveFilters) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  key: const Key('empty-clear-filters'),
+                  onPressed: _resetFilters,
+                  icon: const Icon(Icons.filter_alt_off_outlined),
+                  label: const Text('Clear All Filters'),
+                ),
+              ],
+            ],
           ),
         ),
       );
@@ -425,14 +497,83 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 16),
 
-              const Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  Chip(label: Text('All categories')),
-                  Chip(label: Text('Within 10 km')),
+              // CCVO-76: Combined server-side request filters.
+              DropdownButtonFormField<String?>(
+                key: ValueKey('request-category-filter-$_category'),
+                initialValue: _category,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Category filter',
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('All categories'),
+                  ),
+                  for (final entry in _categories.entries)
+                    DropdownMenuItem<String?>(
+                      value: entry.key,
+                      child: Text(entry.value),
+                    ),
                 ],
+                onChanged: _changeCategory,
               ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String?>(
+                key: ValueKey('request-urgency-filter-$_urgency'),
+                initialValue: _urgency,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Urgency filter',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('All urgency levels'),
+                  ),
+                  DropdownMenuItem<String?>(
+                    value: 'standard',
+                    child: Text('Standard'),
+                  ),
+                  DropdownMenuItem<String?>(
+                    value: 'time_sensitive',
+                    child: Text('Time-sensitive'),
+                  ),
+                ],
+                onChanged: _changeUrgency,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<double>(
+                key: ValueKey('request-distance-filter-$_radiusKm'),
+                initialValue: _radiusKm,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Distance filter',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 5.0, child: Text('Within 5 km')),
+                  DropdownMenuItem(value: 10.0, child: Text('Within 10 km')),
+                  DropdownMenuItem(value: 25.0, child: Text('Within 25 km')),
+                  DropdownMenuItem(value: 50.0, child: Text('Within 50 km')),
+                  DropdownMenuItem(value: 100.0, child: Text('Within 100 km')),
+                ],
+                onChanged: _changeRadius,
+              ),
+              if (_hasActiveFilters) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    key: const Key('clear-request-filters'),
+                    onPressed: _resetFilters,
+                    icon: const Icon(Icons.filter_alt_off_outlined),
+                    label: const Text('Clear All'),
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 16),
 
