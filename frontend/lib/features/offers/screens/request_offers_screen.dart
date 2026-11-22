@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_language.dart';
+
 import '../../messaging/screens/private_conversation_screen.dart';
 import '../../messaging/services/message_service.dart';
 import '../../requests/services/request_service.dart';
@@ -191,15 +193,16 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
   }
 
   String _statusLabel(OfferStatus status) {
+    final strings = AppStrings.of(context);
     switch (status) {
       case OfferStatus.pending:
-        return 'Pending';
+        return strings.offerPending;
       case OfferStatus.accepted:
-        return 'Accepted';
+        return strings.offerAccepted;
       case OfferStatus.declined:
-        return 'Declined';
+        return strings.offerDeclined;
       case OfferStatus.withdrawn:
-        return 'Withdrawn';
+        return strings.offerWithdrawn;
     }
   }
 
@@ -207,10 +210,14 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isOwner ? 'Incoming Offers' : 'Offer to Help'),
+        title: Text(
+          _isOwner
+              ? AppStrings.of(context).incomingOffers
+              : AppStrings.of(context).offerToHelp,
+        ),
         actions: [
           IconButton(
-            tooltip: 'Refresh offers',
+            tooltip: AppStrings.of(context).refreshOffers,
             onPressed: _busy || _loading ? null : _refresh,
             icon: const Icon(Icons.refresh),
           ),
@@ -247,7 +254,7 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
     final offer = _myOffer;
 
     if (widget.isClosed && offer == null) {
-      return const Text('This request is closed. New offers are unavailable.');
+      return Text(AppStrings.of(context).offersClosedNew);
     }
 
     if (offer != null) {
@@ -257,12 +264,14 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Your Offer',
+              Text(
+                AppStrings.of(context).yourOffer,
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              Text('Status: ${_statusLabel(offer.status)}'),
+              Text(
+                AppStrings.of(context).offerStatus(_statusLabel(offer.status)),
+              ),
               const SizedBox(height: 12),
               Text(offer.message),
               if (widget.isClosed) ...[
@@ -273,14 +282,14 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
               ],
               if (offer.status == OfferStatus.accepted) ...[
                 const SizedBox(height: 16),
-                const Text('Your offer was accepted!'),
+                Text(AppStrings.of(context).yourOfferAccepted),
                 if (_canOpenConversation) ...[
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     key: const Key('open-helper-conversation'),
                     onPressed: () => _openConversation(offer),
                     icon: const Icon(Icons.chat_bubble_outline),
-                    label: const Text('Open Conversation'),
+                    label: Text(AppStrings.of(context).openOfferConversation),
                   ),
                 ],
               ],
@@ -293,20 +302,20 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Offer to Help',
+        Text(
+          AppStrings.of(context).offerToHelp,
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        const Text('Let the requester know how you can help.'),
+        Text(AppStrings.of(context).offerHelpHint),
         const SizedBox(height: 16),
         TextField(
           key: const Key('offer-message'),
           controller: _messageController,
           maxLines: 4,
           maxLength: 500,
-          decoration: const InputDecoration(
-            labelText: 'Your message',
+          decoration: InputDecoration(
+            labelText: AppStrings.of(context).offerYourMessage,
             border: OutlineInputBorder(),
           ),
         ),
@@ -314,7 +323,11 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
         FilledButton(
           key: const Key('submit-offer'),
           onPressed: _busy ? null : _submitOffer,
-          child: Text(_busy ? 'Submitting...' : 'Submit Offer'),
+          child: Text(
+            _busy
+                ? AppStrings.of(context).offerSubmitting
+                : AppStrings.of(context).submitOffer,
+          ),
         ),
       ],
     );
@@ -322,7 +335,7 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
 
   Widget _buildOwnerView() {
     if (_offers.isEmpty) {
-      return const Text('No offers have been submitted for this request.');
+      return Text(AppStrings.of(context).noOffers);
     }
 
     final hasAccepted = _offers.any(
@@ -338,8 +351,8 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        const Text(
-          'Incoming Offers',
+        Text(
+          AppStrings.of(context).incomingOffers,
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
@@ -351,13 +364,16 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Offer ${index + 1}',
+                    AppStrings.of(context).offerNumber(index + 1),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(offer.message),
                   const SizedBox(height: 8),
-                  Text('Status: ${_statusLabel(offer.status)}'),
+                  Text(
+                    AppStrings.of(context)
+                        .offerStatus(_statusLabel(offer.status)),
+                  ),
                   if (offer.status == OfferStatus.accepted &&
                       _canOpenConversation) ...[
                     const SizedBox(height: 12),
@@ -365,7 +381,7 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
                       key: Key('open-owner-conversation-${offer.id}'),
                       onPressed: () => _openConversation(offer),
                       icon: const Icon(Icons.chat_bubble_outline),
-                      label: const Text('Open Conversation'),
+                      label: Text(AppStrings.of(context).openOfferConversation),
                     ),
                   ],
                   if (offer.status == OfferStatus.pending &&
@@ -375,7 +391,7 @@ class _RequestOffersScreenState extends State<RequestOffersScreen> {
                     FilledButton(
                       key: Key('accept-${offer.id}'),
                       onPressed: _busy ? null : () => _acceptOffer(offer),
-                      child: const Text('Accept Offer'),
+                      child: Text(AppStrings.of(context).acceptOffer),
                     ),
                   ],
                 ],

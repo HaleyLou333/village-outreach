@@ -3,22 +3,56 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import '../core/theme/app_theme.dart';
+import '../core/localization/app_language.dart';
 import '../features/auth/screens/sign_in_screen.dart';
 import '../features/auth/screens/reset_password_screen.dart';
 import '../features/auth/auth_service.dart';
 import '../features/home/home_screen.dart';
 
-class VillageOutreachApp extends StatelessWidget {
+class VillageOutreachApp extends StatefulWidget {
   const VillageOutreachApp({super.key});
 
   @override
+  State<VillageOutreachApp> createState() => _VillageOutreachAppState();
+}
+
+class _VillageOutreachAppState extends State<VillageOutreachApp> {
+  final AppLanguageController _language = AppLanguageController();
+  @override
+  void initState() {
+    super.initState();
+    _language.load();
+  }
+
+  @override
+  void dispose() {
+    _language.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Village Outreach',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const AuthGate(),
+    return AppLanguageScope(
+      controller: _language,
+      child: ListenableBuilder(
+        listenable: _language,
+        builder: (context, _) => MaterialApp(
+          locale: _language.locale,
+          supportedLocales: const [Locale('en'), Locale('es')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          title: 'Village Outreach',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          home: const AuthGate(),
+        ),
+      ),
     );
   }
 }
@@ -117,8 +151,9 @@ class _AuthGateState extends State<AuthGate> {
 
   void _finishRecovery() {
     setState(() => _recovering = false);
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Password updated.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppStrings.of(context).passwordUpdated)),
+    );
   }
 
   @override
@@ -145,7 +180,7 @@ class _AuthGateState extends State<AuthGate> {
             actions: [
               TextButton(
                 onPressed: () => setState(() => _linkError = null),
-                child: const Text('Dismiss'),
+                child: Text(AppStrings.of(context).dismiss),
               ),
             ],
           ),

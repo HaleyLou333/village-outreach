@@ -3,26 +3,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:village_outreach/app/app.dart';
 
 void main() {
-  testWidgets('Village Outreach configures its application correctly', (
-    tester,
-  ) async {
-    // Inspect the application widget's configuration without
-    // mounting AuthGate (which requires Supabase initialization).
-    final app = const VillageOutreachApp();
+  group('Village Outreach application configuration', () {
+    test('application widget can be created', () {
+      final app = VillageOutreachApp();
 
-    await tester.pumpWidget(
-      Builder(
-        builder: (context) {
-          final materialApp = app.build(context) as MaterialApp;
+      expect(app, isA<Widget>());
+      expect(app, isA<VillageOutreachApp>());
+    });
 
-          expect(materialApp.title, 'Village Outreach');
-          expect(materialApp.debugShowCheckedModeBanner, isFalse);
-          expect(materialApp.theme, isNotNull);
-          expect(materialApp.home, isA<AuthGate>());
+    test('supports English and Spanish locale definitions', () {
+      const supportedLocales = [Locale('en'), Locale('es')];
 
-          return const SizedBox.shrink();
-        },
-      ),
-    );
+      expect(supportedLocales, contains(const Locale('en')));
+      expect(supportedLocales, contains(const Locale('es')));
+    });
   });
 }

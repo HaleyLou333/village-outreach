@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/localization/app_language.dart';
 import '../profile/profile_screen.dart';
 import '../requests/models/help_request.dart';
 import '../requests/screens/request_detail_screen.dart';
@@ -208,9 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Your help request was submitted successfully.'),
-        ),
+        SnackBar(content: Text(AppStrings.of(context).requestSubmitted)),
       );
     }
   }
@@ -241,7 +240,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!context.mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to sign out: ${error.message}')),
+        SnackBar(
+          content: Text(AppStrings.of(context).signOutFailed(error.message)),
+        ),
       );
     } catch (_) {
       if (!context.mounted) return;
@@ -287,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ElevatedButton.icon(
             onPressed: _loadRequests,
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(AppStrings.of(context).retry),
           ),
         ],
       );
@@ -301,8 +302,8 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 _hasActiveFilters
-                    ? 'No requests match your filters.\nTry changing your selections or clear all filters.'
-                    : 'No active requests found nearby.\nTry another area or check back later.',
+                    ? AppStrings.of(context).noFilteredRequests
+                    : AppStrings.of(context).noNearbyRequests,
                 textAlign: TextAlign.center,
               ),
               if (_hasActiveFilters) ...[
@@ -311,7 +312,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   key: const Key('empty-clear-filters'),
                   onPressed: _resetFilters,
                   icon: const Icon(Icons.filter_alt_off_outlined),
-                  label: const Text('Clear All Filters'),
+                  label: Text(AppStrings.of(context).clearAllFilters),
                 ),
               ],
             ],
@@ -337,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(_loadMoreError!, textAlign: TextAlign.center),
           TextButton(
             onPressed: _loadMore,
-            child: const Text('Retry loading more'),
+            child: Text(AppStrings.of(context).retryLoadingMore),
           ),
         ],
 
@@ -345,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
           OutlinedButton.icon(
             onPressed: _loadMore,
             icon: const Icon(Icons.expand_more),
-            label: const Text('Load More'),
+            label: Text(AppStrings.of(context).loadMore),
           ),
       ],
     );
@@ -354,6 +355,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final strings = AppStrings.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -365,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 40,
               height: 40,
               fit: BoxFit.contain,
-              semanticLabel: 'Village Outreach logo',
+              semanticLabel: strings.brandLogoLabel,
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -381,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             key: const Key('open-notifications'),
-            tooltip: 'Notifications',
+            tooltip: strings.notifications,
             onPressed: () async {
               await Navigator.of(context).push<void>(
                 MaterialPageRoute<void>(
@@ -393,7 +395,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           IconButton(
-            tooltip: 'Sign Out',
+            tooltip: strings.signOut,
             icon: const Icon(Icons.logout_outlined),
             onPressed: () => _signOut(context),
           ),
@@ -408,14 +410,11 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.all(20),
             children: [
               Text(
-                'Neighbors helping neighbors',
+                strings.neighborsHelpingNeighbors,
                 style: textTheme.headlineMedium,
               ),
               const SizedBox(height: 8),
-              Text(
-                'Find local support or lend a helping hand.',
-                style: textTheme.bodyLarge,
-              ),
+              Text(strings.homeIntro, style: textTheme.bodyLarge),
               const SizedBox(height: 24),
 
               // CCVO-66: Request Help is now interactive.
@@ -423,7 +422,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Expanded(
                     child: _ActionCard(
-                      label: 'Request Help',
+                      label: strings.requestHelp,
                       icon: Icons.volunteer_activism_outlined,
                       background: AppColors.forestGreen,
                       foreground: AppColors.white,
@@ -433,7 +432,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _ActionCard(
-                      label: 'Offer Help',
+                      label: strings.offerHelp,
                       icon: Icons.handshake_outlined,
                       background: AppColors.sandBeige,
                       foreground: AppColors.charcoal,
@@ -457,10 +456,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 key: _nearbySection,
                 children: [
                   Expanded(
-                    child: Text('Nearby Requests', style: textTheme.titleLarge),
+                    child: Text(
+                      strings.nearbyRequests,
+                      style: textTheme.titleLarge,
+                    ),
                   ),
                   IconButton(
-                    tooltip: 'Refresh nearby requests',
+                    tooltip: strings.refreshNearbyRequests,
                     onPressed: _loading ? null : _loadRequests,
                     icon: const Icon(Icons.refresh),
                   ),
@@ -468,14 +470,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
 
-              Text(
-                'Live requests from your community',
-                style: textTheme.bodyMedium,
-              ),
+              Text(strings.liveCommunityRequests, style: textTheme.bodyMedium),
               const SizedBox(height: 12),
               InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Search area',
+                decoration: InputDecoration(
+                  labelText: strings.searchArea,
                   border: OutlineInputBorder(),
                   contentPadding: EdgeInsets.symmetric(horizontal: 12),
                 ),
@@ -502,14 +501,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 key: ValueKey('request-category-filter-$_category'),
                 initialValue: _category,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Category filter',
+                decoration: InputDecoration(
+                  labelText: strings.categoryFilter,
                   border: OutlineInputBorder(),
                 ),
                 items: [
-                  const DropdownMenuItem<String?>(
+                  DropdownMenuItem<String?>(
                     value: null,
-                    child: Text('All categories'),
+                    child: Text(strings.allCategories),
                   ),
                   for (final entry in _categories.entries)
                     DropdownMenuItem<String?>(
@@ -524,22 +523,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 key: ValueKey('request-urgency-filter-$_urgency'),
                 initialValue: _urgency,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Urgency filter',
+                decoration: InputDecoration(
+                  labelText: strings.urgencyFilter,
                   border: OutlineInputBorder(),
                 ),
-                items: const [
+                items: [
                   DropdownMenuItem<String?>(
                     value: null,
-                    child: Text('All urgency levels'),
+                    child: Text(strings.allUrgencyLevels),
                   ),
                   DropdownMenuItem<String?>(
                     value: 'standard',
-                    child: Text('Standard'),
+                    child: Text(strings.standard),
                   ),
                   DropdownMenuItem<String?>(
                     value: 'time_sensitive',
-                    child: Text('Time-sensitive'),
+                    child: Text(strings.timeSensitive),
                   ),
                 ],
                 onChanged: _changeUrgency,
@@ -549,16 +548,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 key: ValueKey('request-distance-filter-$_radiusKm'),
                 initialValue: _radiusKm,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Distance filter',
+                decoration: InputDecoration(
+                  labelText: strings.distanceFilter,
                   border: OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 5.0, child: Text('Within 5 km')),
-                  DropdownMenuItem(value: 10.0, child: Text('Within 10 km')),
-                  DropdownMenuItem(value: 25.0, child: Text('Within 25 km')),
-                  DropdownMenuItem(value: 50.0, child: Text('Within 50 km')),
-                  DropdownMenuItem(value: 100.0, child: Text('Within 100 km')),
+                items: [
+                  DropdownMenuItem(
+                    value: 5.0,
+                    child: Text(strings.withinKm(5)),
+                  ),
+                  DropdownMenuItem(
+                    value: 10.0,
+                    child: Text(strings.withinKm(10)),
+                  ),
+                  DropdownMenuItem(
+                    value: 25.0,
+                    child: Text(strings.withinKm(25)),
+                  ),
+                  DropdownMenuItem(
+                    value: 50.0,
+                    child: Text(strings.withinKm(50)),
+                  ),
+                  DropdownMenuItem(
+                    value: 100.0,
+                    child: Text(strings.withinKm(100)),
+                  ),
                 ],
                 onChanged: _changeRadius,
               ),
@@ -570,7 +584,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     key: const Key('clear-request-filters'),
                     onPressed: _resetFilters,
                     icon: const Icon(Icons.filter_alt_off_outlined),
-                    label: const Text('Clear All'),
+                    label: Text(strings.clearAll),
                   ),
                 ),
               ],
@@ -598,28 +612,28 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
-            label: 'Home',
+            label: strings.home,
           ),
           NavigationDestination(
             icon: Icon(Icons.map_outlined),
             selectedIcon: Icon(Icons.map),
-            label: 'Resources',
+            label: strings.resources,
           ),
           NavigationDestination(
             icon: Icon(Icons.handshake_outlined),
-            label: 'Help',
+            label: strings.help,
           ),
           NavigationDestination(
             icon: Icon(Icons.event_outlined),
-            label: 'Events',
+            label: strings.events,
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
-            label: 'Profile',
+            label: strings.profile,
           ),
         ],
       ),

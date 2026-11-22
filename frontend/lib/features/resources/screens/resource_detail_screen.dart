@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/localization/app_language.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/community_resource.dart';
@@ -51,9 +54,7 @@ class _ResourceDetailScreenState extends State<ResourceDetailScreen> {
 
       setState(() {
         _loading = false;
-        _error =
-            'Resource details could not be loaded. '
-            'Please try again.';
+        _error = AppStrings.of(context).publicDetailsError;
       });
     }
   }
@@ -69,7 +70,7 @@ class _ResourceDetailScreenState extends State<ResourceDetailScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open this link.')),
+        SnackBar(content: Text(AppStrings.of(context).publicLinkError)),
       );
     }
   }
@@ -80,9 +81,9 @@ class _ResourceDetailScreenState extends State<ResourceDetailScreen> {
     if (uri == null ||
         !['http', 'https'].contains(uri.scheme) ||
         uri.host.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Invalid website address.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.of(context).publicInvalidWebsite)),
+      );
       return;
     }
 
@@ -95,7 +96,7 @@ class _ResourceDetailScreenState extends State<ResourceDetailScreen> {
     final resource = _resource;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Resource Details')),
+      appBar: AppBar(title: Text(AppStrings.of(context).publicDetailsTitle)),
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
@@ -112,7 +113,7 @@ class _ResourceDetailScreenState extends State<ResourceDetailScreen> {
                       const SizedBox(height: 12),
                       FilledButton(
                         onPressed: _loadDetails,
-                        child: const Text('Retry'),
+                        child: Text(AppStrings.of(context).retry),
                       ),
                     ],
                   ),
@@ -131,13 +132,13 @@ class _ResourceDetailScreenState extends State<ResourceDetailScreen> {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.location_on_outlined),
-                    title: const Text('Address'),
+                    title: Text(AppStrings.of(context).publicAddress),
                     subtitle: Text(resource.address),
                   ),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.map_outlined),
-                    title: const Text('Service area'),
+                    title: Text(AppStrings.of(context).publicServiceArea),
                     subtitle: Text(resource.area),
                   ),
                   if (resource.phone != null &&
@@ -145,7 +146,7 @@ class _ResourceDetailScreenState extends State<ResourceDetailScreen> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.phone),
-                      title: const Text('Phone'),
+                      title: Text(AppStrings.of(context).publicPhone),
                       subtitle: Text(resource.phone!),
                       trailing: const Icon(Icons.open_in_new),
                       onTap: () =>
@@ -156,7 +157,7 @@ class _ResourceDetailScreenState extends State<ResourceDetailScreen> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.language),
-                      title: const Text('Website'),
+                      title: Text(AppStrings.of(context).publicWebsite),
                       subtitle: Text(resource.website!),
                       trailing: const Icon(Icons.open_in_new),
                       onTap: () => _openWebsite(resource.website!),
@@ -165,13 +166,13 @@ class _ResourceDetailScreenState extends State<ResourceDetailScreen> {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.verified_outlined),
-                    title: const Text('Last verified'),
+                    title: Text(AppStrings.of(context).publicLastVerified),
                     subtitle: Text(resource.verificationDate),
                   ),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.source),
-                    title: const Text('Information source'),
+                    title: Text(AppStrings.of(context).publicInformationSource),
                     subtitle: Text(resource.sourceUrl),
                     trailing: const Icon(Icons.open_in_new),
                     onTap: () => _openWebsite(resource.sourceUrl),
@@ -181,10 +182,7 @@ class _ResourceDetailScreenState extends State<ResourceDetailScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text(
-                        'Resource information may change. '
-                        'Please contact the organization '
-                        'directly to confirm availability, '
-                        'hours, and eligibility.',
+                        AppStrings.of(context).publicDisclaimer,
                         style: theme.textTheme.bodyMedium,
                       ),
                     ),

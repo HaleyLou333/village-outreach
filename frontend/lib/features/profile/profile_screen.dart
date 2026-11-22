@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'profile_service.dart';
 import 'user_profile.dart';
+import '../../core/localization/app_language.dart';
 
 class ProfileScreen extends StatefulWidget {
   // Optional dependencies for automated testing.
@@ -83,9 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (name.isEmpty || name.length > 100) {
       setState(() {
-        _error =
-            'Display name must be between '
-            '1 and 100 characters.';
+        _error = AppStrings.of(context).profileNameInvalid;
       });
 
       return;
@@ -108,7 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully!')),
+        SnackBar(content: Text(AppStrings.of(context).profileSaveSuccess)),
       );
     } catch (error) {
       if (!mounted) return;
@@ -159,26 +158,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Sign Out?'),
+          title: Text(AppStrings.of(dialogContext).profileSignOutTitle),
           content: Text(
             _editing
-                ? 'Unsaved profile changes will be lost. '
-                      'Are you sure you want to sign out?'
-                : 'Are you sure you want to sign out '
-                      'of Village Outreach?',
+                ? AppStrings.of(dialogContext).profileUnsavedSignOut
+                : AppStrings.of(dialogContext).profileConfirmSignOut,
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop(false);
               },
-              child: const Text('Cancel'),
+              child: Text(AppStrings.of(dialogContext).cancel),
             ),
             FilledButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop(true);
               },
-              child: const Text('Sign Out'),
+              child: Text(AppStrings.of(dialogContext).signOut),
             ),
           ],
         );
@@ -209,7 +206,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
 
       setState(() {
-        _error = 'Unable to sign out. Please try again.';
+        _error = AppStrings.of(context).profileSignOutFailed;
       });
     } finally {
       if (mounted) {
@@ -235,15 +232,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final profile = _profile;
     final theme = Theme.of(context);
+    final strings = AppStrings.of(context);
 
     return PopScope(
       canPop: !_saving && !_signingOut,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Account Settings'),
+          title: Text(strings.settings),
           actions: [
             IconButton(
-              tooltip: 'Refresh profile',
+              tooltip: strings.refreshProfile,
               onPressed: _loading || _saving || _editing || _signingOut
                   ? null
                   : _loadProfile,
@@ -270,16 +268,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 24),
 
                     Text(
-                      'Manage your account',
+                      strings.manageAccount,
                       style: theme.textTheme.headlineSmall,
                       textAlign: TextAlign.center,
                     ),
 
                     const SizedBox(height: 8),
 
-                    const Text(
-                      'View and update your Village Outreach '
-                      'profile and account settings.',
+                    Text(
+                      strings.accountDescription,
                       textAlign: TextAlign.center,
                     ),
 
@@ -300,13 +297,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     // Profile loading failure.
                     if (profile == null) ...[
-                      const Text('Unable to load your profile.'),
+                      Text(strings.profileLoadFailed),
 
                       const SizedBox(height: 12),
 
                       FilledButton(
                         onPressed: _signingOut ? null : _loadProfile,
-                        child: const Text('Try Again'),
+                        child: Text(strings.profileTryAgain),
                       ),
                     ] else ...[
                       // Display name.
@@ -321,8 +318,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _saveProfile();
                           }
                         },
-                        decoration: const InputDecoration(
-                          labelText: 'Display Name',
+                        decoration: InputDecoration(
+                          labelText: strings.displayName,
                           prefixIcon: Icon(Icons.badge_outlined),
                           border: OutlineInputBorder(),
                         ),
@@ -335,8 +332,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         key: ValueKey('profile-email-${profile.email}'),
                         initialValue: profile.email,
                         readOnly: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
+                        decoration: InputDecoration(
+                          labelText: strings.profileEmail,
                           prefixIcon: Icon(Icons.email_outlined),
                           border: OutlineInputBorder(),
                         ),
@@ -347,14 +344,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       // Account role.
                       ListTile(
                         leading: const Icon(Icons.verified_user_outlined),
-                        title: const Text('Account Role'),
+                        title: Text(strings.accountRole),
                         subtitle: Text(profile.role),
                       ),
 
                       // Account status.
                       ListTile(
                         leading: const Icon(Icons.info_outline),
-                        title: const Text('Account Status'),
+                        title: Text(strings.accountStatus),
                         subtitle: Text(profile.status),
                       ),
 
@@ -376,14 +373,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                 )
                               : const Icon(Icons.save_outlined),
-                          label: Text(_saving ? 'Saving...' : 'Save Changes'),
+                          label: Text(
+                            _saving
+                                ? strings.profileSaving
+                                : strings.saveChanges,
+                          ),
                         )
                       else
                         FilledButton.icon(
                           key: const Key('edit-profile'),
                           onPressed: _signingOut ? null : _startEditing,
                           icon: const Icon(Icons.edit_outlined),
-                          label: const Text('Edit Profile'),
+                          label: Text(strings.editProfile),
                         ),
 
                       // Cancel editing.
@@ -393,7 +394,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onPressed: _saving || _signingOut
                               ? null
                               : _cancelEditing,
-                          child: const Text('Cancel'),
+                          child: Text(strings.cancel),
                         ),
                     ],
 
@@ -401,15 +402,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const Divider(),
                     const SizedBox(height: 16),
 
+                    // CCVO-82: Language selection is independent of profile API availability.
+                    Text(strings.language, style: theme.textTheme.titleLarge),
+                    const SizedBox(height: 8),
+                    Text(strings.languageHint),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      key: const Key('app-language-selector'),
+                      initialValue:
+                          AppLanguageScope.maybeOf(context)
+                              ?.locale
+                              .languageCode ??
+                          'en',
+                      decoration: InputDecoration(labelText: strings.language),
+                      items: [
+                        DropdownMenuItem(
+                          value: 'en',
+                          child: Text(strings.english),
+                        ),
+                        DropdownMenuItem(
+                          value: 'es',
+                          child: Text(strings.spanishLabel),
+                        ),
+                      ],
+                      onChanged: (code) {
+                        if (code != null) {
+                          AppLanguageScope.maybeOf(context)?.select(code);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 16),
+
                     // Account session management.
-                    Text('Account Session', style: theme.textTheme.titleLarge),
+                    Text(
+                      strings.accountSession,
+                      style: theme.textTheme.titleLarge,
+                    ),
 
                     const SizedBox(height: 8),
 
-                    const Text(
-                      'Sign out of your Village Outreach '
-                      'account on this device.',
-                    ),
+                    Text(strings.profileSignOutHint),
 
                     const SizedBox(height: 16),
 
@@ -427,7 +461,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.logout),
-                      label: Text(_signingOut ? 'Signing Out...' : 'Sign Out'),
+                      label: Text(
+                        _signingOut
+                            ? strings.profileSigningOut
+                            : strings.signOut,
+                      ),
                     ),
 
                     const SizedBox(height: 24),

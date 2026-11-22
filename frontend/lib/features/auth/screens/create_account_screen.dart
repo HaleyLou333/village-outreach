@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/localization/app_language.dart';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../auth_service.dart';
@@ -71,7 +74,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'Account creation failed. Try again.');
+        setState(() => _error = AppStrings.of(context).accountFailed);
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -80,8 +83,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Account')),
+      appBar: AppBar(title: Text(strings.createAccount)),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -96,7 +100,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     Image.asset('assets/brand/logo.png', height: 72),
                     const SizedBox(height: 20),
                     Text(
-                      'Join Village Outreach',
+                      strings.joinVillage,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
@@ -105,27 +109,27 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       controller: _name,
                       maxLength: 100,
                       textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'Display name',
+                      decoration: InputDecoration(
+                        labelText: strings.accountCreationDisplayName,
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) =>
                           (value == null || value.trim().isEmpty)
-                          ? 'Enter your name'
+                          ? strings.enterName
                           : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email address',
+                      decoration: InputDecoration(
+                        labelText: strings.emailAddress,
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
                             .hasMatch(value?.trim() ?? '')) {
-                          return 'Enter a valid email address';
+                          return strings.invalidEmail;
                         }
                         return null;
                       },
@@ -135,12 +139,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       controller: _password,
                       obscureText: _hidePassword,
                       decoration: InputDecoration(
-                        labelText: 'Password',
+                        labelText: strings.password,
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
                           tooltip: _hidePassword
-                              ? 'Show password'
-                              : 'Hide password',
+                              ? strings.showPassword
+                              : strings.hidePassword,
                           icon: Icon(
                             _hidePassword
                                 ? Icons.visibility_outlined
@@ -152,7 +156,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       ),
                       validator: (value) {
                         if (value == null || value.length < 8) {
-                          return 'Use at least 8 characters';
+                          return strings.minEight;
                         }
                         return null;
                       },
@@ -172,8 +176,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       child: FilledButton(
                         onPressed: _loading ? null : _createAccount,
                         child: _loading
-                            ? const AuthBusyLabel('Creating account...')
-                            : const Text('Create Account'),
+                            ? AuthBusyLabel(strings.creatingAccount)
+                            : Text(strings.createAccount),
                       ),
                     ),
                   ],

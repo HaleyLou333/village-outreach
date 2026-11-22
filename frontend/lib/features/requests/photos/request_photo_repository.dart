@@ -7,8 +7,12 @@ class RequestPhoto {
   final String requestId;
   final String viewUrl;
   final DateTime expiresAt;
-  const RequestPhoto({required this.id, required this.requestId,
-    required this.viewUrl, required this.expiresAt});
+  const RequestPhoto({
+    required this.id,
+    required this.requestId,
+    required this.viewUrl,
+    required this.expiresAt,
+  });
 
   bool needsRefresh(DateTime now) =>
       !expiresAt.isAfter(now.add(const Duration(seconds: 30)));
@@ -25,10 +29,14 @@ class PhotoUploadException implements Exception {
 /// The idempotency key MUST be reused for retries of the same image.
 abstract class RequestPhotoRepository {
   Future<List<RequestPhoto>> list(String requestId);
-  Future<RequestPhoto> upload({required String requestId,
-    required Uint8List bytes, required String fileName,
-    required String contentType, required String idempotencyKey,
-    required void Function(double) onProgress});
+  Future<RequestPhoto> upload({
+    required String requestId,
+    required Uint8List bytes,
+    required String fileName,
+    required String contentType,
+    required String idempotencyKey,
+    required void Function(double) onProgress,
+  });
   Future<RequestPhoto> refreshViewingUrl(String requestId, String photoId);
 }
 
@@ -38,13 +46,21 @@ class UnavailableRequestPhotoRepository implements RequestPhotoRepository {
   @override
   Future<List<RequestPhoto>> list(String requestId) async => const [];
   @override
-  Future<RequestPhoto> upload({required String requestId,
-    required Uint8List bytes, required String fileName,
-    required String contentType, required String idempotencyKey,
-    required void Function(double) onProgress}) async =>
-      throw const PhotoUploadException(
-        'Photo upload is not available until the request attachment API is connected.');
+  Future<RequestPhoto> upload({
+    required String requestId,
+    required Uint8List bytes,
+    required String fileName,
+    required String contentType,
+    required String idempotencyKey,
+    required void Function(double) onProgress,
+  }) async => throw const PhotoUploadException(
+    'Photo upload is not available until the request attachment API is connected.',
+  );
   @override
-  Future<RequestPhoto> refreshViewingUrl(String requestId, String photoId) async =>
-      throw const PhotoUploadException('Private photo viewing is not available yet.');
+  Future<RequestPhoto> refreshViewingUrl(
+    String requestId,
+    String photoId,
+  ) async => throw const PhotoUploadException(
+    'Private photo viewing is not available yet.',
+  );
 }

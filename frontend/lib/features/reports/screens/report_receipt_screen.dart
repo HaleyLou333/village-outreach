@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/localization/app_language.dart';
+
 import '../models/report_receipt.dart';
 
 class ReportReceiptScreen extends StatelessWidget {
@@ -11,10 +13,11 @@ class ReportReceiptScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final strings = AppStrings.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Report Submitted'),
+        title: Text(strings.reportSubmittedTitle),
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
@@ -29,17 +32,12 @@ class ReportReceiptScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Thank you for speaking up',
+              strings.reportThankYou,
               style: theme.textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Your report has been received. '
-              'Thank you for helping keep our '
-              'community safe.',
-              textAlign: TextAlign.center,
-            ),
+            Text(strings.reportReceived, textAlign: TextAlign.center),
             const SizedBox(height: 24),
             Card(
               child: Padding(
@@ -48,11 +46,11 @@ class ReportReceiptScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Submission receipt',
+                      strings.reportReceiptHeading,
                       style: theme.textTheme.titleMedium,
                     ),
                     const SizedBox(height: 16),
-                    const Text('Reference ID'),
+                    Text(strings.reportReferenceId),
                     SelectableText(receipt.id),
                     TextButton.icon(
                       onPressed: () async {
@@ -63,29 +61,27 @@ class ReportReceiptScreen extends StatelessWidget {
                         if (!context.mounted) return;
 
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Reference ID copied.')),
+                          SnackBar(
+                            content: Text(strings.reportReferenceCopied),
+                          ),
                         );
                       },
                       icon: const Icon(Icons.copy),
-                      label: const Text('Copy reference'),
+                      label: Text(strings.reportCopyReference),
                     ),
                     const Divider(),
-                    const Text('Submission status'),
-                    const Chip(label: Text('Pending review')),
+                    Text(strings.reportSubmissionStatus),
+                    Chip(label: Text(strings.reportPendingReview)),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'For privacy and safety, moderation '
-              'records and actions are not displayed '
-              'in the application.',
-            ),
+            Text(strings.reportPrivacyNote),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Done'),
+              child: Text(strings.reportDone),
             ),
           ],
         ),

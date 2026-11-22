@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_language.dart';
+
 import '../auth_service.dart';
 import '../auth_feedback.dart';
 
@@ -94,10 +96,11 @@ class _EmailActionScreenState extends State<EmailActionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.resetPassword ? 'Reset password' : 'Confirm your email',
+          widget.resetPassword ? strings.resetPassword : strings.confirmEmail,
         ),
       ),
       body: SafeArea(
@@ -113,8 +116,8 @@ class _EmailActionScreenState extends State<EmailActionScreen> {
                   children: [
                     Text(
                       widget.resetPassword
-                          ? 'Enter your account email to request a password reset.'
-                          : 'Enter your account email to request another confirmation link.',
+                          ? strings.resetEmailInstruction
+                          : strings.confirmationInstruction,
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
@@ -126,29 +129,31 @@ class _EmailActionScreenState extends State<EmailActionScreen> {
                       }),
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
-                      decoration: const InputDecoration(
-                        labelText: 'Email address',
+                      decoration: InputDecoration(
+                        labelText: strings.emailAddress,
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) =>
                           RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
                               .hasMatch(value?.trim() ?? '')
                           ? null
-                          : 'Enter a valid email address.',
+                          : strings.invalidEmailPeriod,
                     ),
                     const SizedBox(height: 20),
                     if (_sent) ...[
                       AuthFeedback(
-                        title: 'Check your inbox',
+                        title: strings.checkInbox,
                         icon: Icons.mark_email_read_outlined,
-                        message:
-                            'Email request accepted for $_requestedEmail. If this account is eligible, you will receive a link. Check your spam folder too.\n\nOpen the newest link on this device, where you requested it. ${widget.resetPassword ? 'Then choose a new password.' : 'Then return here to sign in.'}',
+                        message: strings.emailRequestAccepted(
+                          _requestedEmail ?? '',
+                          resetPassword: widget.resetPassword,
+                        ),
                       ),
                       const SizedBox(height: 16),
                     ],
                     if (_error != null) ...[
                       AuthFeedback(
-                        title: 'Email not requested',
+                        title: strings.emailNotRequested,
                         message: _error!,
                         error: true,
                       ),
@@ -159,13 +164,13 @@ class _EmailActionScreenState extends State<EmailActionScreen> {
                           ? null
                           : _send,
                       child: _sending
-                          ? const AuthBusyLabel('Sending email...')
+                          ? AuthBusyLabel(strings.sendingEmail)
                           : Text(
                               _secondsRemaining > 0
-                                  ? 'Send again in ${_secondsRemaining}s'
+                                  ? strings.sendAgainIn(_secondsRemaining)
                                   : _sent
-                                  ? 'Send another email'
-                                  : 'Send email',
+                                  ? strings.sendAnother
+                                  : strings.sendEmail,
                             ),
                     ),
                     const SizedBox(height: 12),
@@ -177,8 +182,8 @@ class _EmailActionScreenState extends State<EmailActionScreen> {
                                     .popUntil((route) => route.isFirst),
                       child: Text(
                         _auth.currentSession == null
-                            ? 'Back to sign in'
-                            : 'Back to app',
+                            ? strings.backSignIn
+                            : strings.backApp,
                       ),
                     ),
                   ],

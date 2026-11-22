@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../auth/auth_service.dart';
+import '../../../core/localization/app_language.dart';
 import '../../requests/screens/request_detail_screen.dart';
 import '../../requests/services/request_service.dart';
 import '../models/app_notification.dart';
@@ -194,7 +195,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
       setState(() {
         _loading = false;
-        _error = 'Unable to load notifications. Please try again.';
+        _error = AppStrings.of(context).notificationsLoadFailed;
       });
     }
   }
@@ -243,7 +244,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
       setState(() {
         _loadingMore = false;
-        _loadMoreError = 'Unable to load more notifications.';
+        _loadMoreError = AppStrings.of(context).notificationsMoreFailed;
       });
     }
   }
@@ -336,17 +337,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
       setState(() {
         if (error.statusCode == 403 || error.statusCode == 404) {
-          _actionError =
-              'This request is no longer available '
-              'or you do not have permission to view it.';
+          _actionError = AppStrings.of(context).notificationsUnavailable;
         } else if (error.statusCode == 401) {
-          _actionError =
-              'Your session may have expired. '
-              'Please sign in again.';
+          _actionError = AppStrings.of(context).notificationsSessionExpired;
         } else {
-          _actionError =
-              'Unable to open this notification. '
-              'Please try again.';
+          _actionError = AppStrings.of(context).notificationsOpenFailed;
         }
       });
     } catch (_) {
@@ -386,22 +381,48 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final difference = DateTime.now().difference(local);
 
     if (difference.isNegative || difference.inMinutes < 1) {
-      return 'Just now';
+      return AppStrings.of(context).notificationJustNow;
     }
 
     if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
+      return AppStrings.of(context)
+          .notificationMinutesAgo(difference.inMinutes);
     }
 
     if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
+      return AppStrings.of(context).notificationHoursAgo(difference.inHours);
     }
 
     if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
+      return AppStrings.of(context).notificationDaysAgo(difference.inDays);
     }
 
     return '${local.month}/${local.day}/${local.year}';
+  }
+
+  String _notificationTitle(AppNotificationType type, AppStrings strings) {
+    switch (type) {
+      case AppNotificationType.offerReceived:
+        return strings.notificationOfferReceived;
+      case AppNotificationType.offerAccepted:
+        return strings.notificationOfferAccepted;
+      case AppNotificationType.messageReceived:
+        return strings.notificationMessageReceived;
+    }
+  }
+
+  String _notificationDescription(
+    AppNotificationType type,
+    AppStrings strings,
+  ) {
+    switch (type) {
+      case AppNotificationType.offerReceived:
+        return strings.notificationOfferReceivedDetail;
+      case AppNotificationType.offerAccepted:
+        return strings.notificationOfferAcceptedDetail;
+      case AppNotificationType.messageReceived:
+        return strings.notificationMessageReceivedDetail;
+    }
   }
 
   Widget _buildNotification(AppNotification notification) {
@@ -422,7 +443,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           children: [
             Expanded(
               child: Text(
-                notification.title,
+                _notificationTitle(notification.type, AppStrings.of(context)),
                 style: TextStyle(
                   fontWeight: notification.isUnread
                       ? FontWeight.bold
@@ -447,7 +468,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(notification.description),
+              Text(
+                _notificationDescription(
+                  notification.type,
+                  AppStrings.of(context),
+                ),
+              ),
               const SizedBox(height: 6),
               Text(
                 _timeLabel(notification.createdAt),
@@ -471,7 +497,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   Widget _buildContent() {
     if (_currentUserId == null) {
-      return const Center(child: Text('Sign in to view your notifications.'));
+      return Center(child: Text(AppStrings.of(context).notificationsSignIn));
     }
 
     if (_loading) {
@@ -492,7 +518,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               ElevatedButton.icon(
                 onPressed: _refresh,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
+                label: Text(AppStrings.of(context).notificationsRetry),
               ),
             ],
           ),
@@ -505,21 +531,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
         onRefresh: _refresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 100),
-            Icon(Icons.notifications_none_outlined, size: 56),
-            SizedBox(height: 16),
+          children: [
+            const SizedBox(height: 100),
+            const Icon(Icons.notifications_none_outlined, size: 56),
+            const SizedBox(height: 16),
             Center(
               child: Text(
-                'No notifications yet',
+                AppStrings.of(context).notificationsEmpty,
                 style: TextStyle(fontSize: 20),
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Center(
               child: Text(
-                'Updates about your requests and '
-                'conversations will appear here.',
+                AppStrings.of(context).notificationsEmptyHint,
                 textAlign: TextAlign.center,
               ),
             ),
@@ -553,14 +578,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
             Text(_loadMoreError!, textAlign: TextAlign.center),
             TextButton(
               onPressed: _loadMore,
-              child: const Text('Retry loading more'),
+              child: Text(AppStrings.of(context).notificationsRetryMore),
             ),
           ],
           if (_hasMore && !_loadingMore && _loadMoreError == null)
             OutlinedButton.icon(
               onPressed: _loadMore,
               icon: const Icon(Icons.expand_more),
-              label: const Text('Load More'),
+              label: Text(AppStrings.of(context).notificationsLoadMore),
             ),
         ],
       ),
@@ -571,10 +596,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text(AppStrings.of(context).notificationsTitle),
         actions: [
           IconButton(
-            tooltip: 'Refresh notifications',
+            tooltip: AppStrings.of(context).refreshNotifications,
             onPressed: _loading || _currentUserId == null ? null : _refresh,
             icon: const Icon(Icons.refresh),
           ),

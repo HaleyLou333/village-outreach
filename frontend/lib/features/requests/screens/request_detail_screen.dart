@@ -1,4 +1,7 @@
 import 'package:flutter/foundation.dart';
+
+import '../../../core/localization/app_language.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -111,13 +114,13 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   }
 
   Future<void> _copyDiagnostics(HelpRequest request) async {
+    final strings = AppStrings.of(context);
     await Clipboard.setData(ClipboardData(text: _diagnostics(request)));
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Ownership diagnostics copied.')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(strings.diagnosticsCopied)));
   }
 
   @override
@@ -295,6 +298,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
   /// Opens the request form with existing information.
   Future<void> _editRequest() async {
+    final strings = AppStrings.of(context);
     final request = _request;
 
     if (request == null || !_canManage(request) || _updating) {
@@ -320,9 +324,8 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
       _logOwnership(updated);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Request updated successfully.')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(strings.requestUpdated)));
 
       await _loadRequest();
     }
@@ -341,6 +344,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       return;
     }
 
+    final strings = AppStrings.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -352,7 +356,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
               onPressed: () {
                 Navigator.of(dialogContext).pop(false);
               },
-              child: const Text('Go Back'),
+              child: Text(strings.goBack),
             ),
             FilledButton(
               onPressed: () {
@@ -381,6 +385,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
   /// Sends PATCH /requests/{request_id}.
   Future<void> _changeStatus(String status) async {
+    final strings = AppStrings.of(context);
     final request = _request;
 
     if (request == null || !_canManage(request) || _updating) {
@@ -410,8 +415,8 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         SnackBar(
           content: Text(
             status == 'completed'
-                ? 'Request marked as completed.'
-                : 'Request canceled successfully.',
+                ? strings.requestCompleted
+                : strings.requestCanceled,
           ),
         ),
       );
@@ -431,9 +436,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       if (!mounted) return;
 
       setState(() {
-        _actionError =
-            'Unable to update this request. '
-            'Please try again.';
+        _actionError = strings.updateRequestFailed;
       });
 
       if (kDebugMode) {
@@ -480,14 +483,15 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return PopScope(
       canPop: !_updating,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Request Details'),
+          title: Text(strings.requestDetails),
           actions: [
             IconButton(
-              tooltip: 'Refresh request',
+              tooltip: strings.refreshRequest,
               onPressed: _updating
                   ? null
                   : () async {
@@ -502,13 +506,14 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             : _error != null
             ? _buildError()
             : _request == null
-            ? const Center(child: Text('Request not found.'))
+            ? Center(child: Text(strings.requestNotFound))
             : _buildDetails(_request!),
       ),
     );
   }
 
   Widget _buildError() {
+    final strings = AppStrings.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -524,7 +529,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                 await Future.wait([_loadProfile(), _loadRequest()]);
               },
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(strings.retry),
             ),
           ],
         ),
@@ -534,13 +539,14 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
   Widget _buildDetails(HelpRequest request) {
     final theme = Theme.of(context);
+    final strings = AppStrings.of(context);
 
     final isOwner = _isOwner(request);
     final canManage = _canManage(request);
 
     final distanceLabel = widget.distanceKm == null
-        ? 'Distance unavailable'
-        : '${(widget.distanceKm! * 0.621371).toStringAsFixed(1)} mi away';
+        ? strings.distanceUnavailable
+        : strings.milesAway((widget.distanceKm! * 0.621371).toStringAsFixed(1));
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -570,14 +576,14 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           const SizedBox(height: 24),
 
           // Description.
-          Text('Description', style: theme.textTheme.titleLarge),
+          Text(strings.descriptionLabel, style: theme.textTheme.titleLarge),
           const SizedBox(height: 8),
           Text(request.description),
 
           const SizedBox(height: 24),
 
           // Location.
-          Text('Location', style: theme.textTheme.titleLarge),
+          Text(strings.locationLabel, style: theme.textTheme.titleLarge),
           const SizedBox(height: 8),
           Text(request.area),
           Text(distanceLabel),
@@ -585,16 +591,13 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           const SizedBox(height: 24),
 
           // Status.
-          Text('Status', style: theme.textTheme.titleLarge),
+          Text(strings.statusLabel, style: theme.textTheme.titleLarge),
           const SizedBox(height: 8),
           Text(request.statusLabel),
 
           if (request.isClosed) ...[
             const SizedBox(height: 16),
-            const Text(
-              'This request is closed and is no longer '
-              'accepting help.',
-            ),
+            Text(strings.requestClosed),
           ],
 
           // Existing offers and messaging functionality.
@@ -607,7 +610,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             const Divider(),
             const SizedBox(height: 12),
 
-            Text('Helper Offers', style: theme.textTheme.titleLarge),
+            Text(strings.helperOffers, style: theme.textTheme.titleLarge),
 
             const SizedBox(height: 12),
 
@@ -620,9 +623,9 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
               label: Text(
                 request.isClosed
                     ? (isOwner
-                          ? 'Review Offers & Messages'
-                          : 'View Offer & Messages')
-                    : (isOwner ? 'Review Offers' : 'Offer to Help'),
+                          ? strings.reviewOffersMessages
+                          : strings.viewOfferMessages)
+                    : (isOwner ? strings.reviewOffers : strings.offerToHelp),
               ),
             ),
           ],
@@ -638,14 +641,11 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             const Divider(),
             const SizedBox(height: 12),
 
-            Text('Community Safety', style: theme.textTheme.titleLarge),
+            Text(strings.communitySafety, style: theme.textTheme.titleLarge),
 
             const SizedBox(height: 8),
 
-            const Text(
-              'Report inappropriate content or behavior '
-              'to help keep Village Outreach safe.',
-            ),
+            Text(strings.reportSafetyHint),
 
             const SizedBox(height: 12),
 
@@ -655,7 +655,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   ? null
                   : () => _openReport(ReportTargetType.request),
               icon: const Icon(Icons.flag_outlined),
-              label: const Text('Report Request'),
+              label: Text(strings.reportRequest),
             ),
 
             const SizedBox(height: 8),
@@ -666,7 +666,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   ? null
                   : () => _openReport(ReportTargetType.user),
               icon: const Icon(Icons.person_off_outlined),
-              label: const Text('Report User'),
+              label: Text(strings.reportUser),
             ),
           ],
 
@@ -676,7 +676,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             const Divider(),
             const SizedBox(height: 16),
 
-            Text('Manage Your Request', style: theme.textTheme.titleLarge),
+            Text(strings.manageYourRequest, style: theme.textTheme.titleLarge),
 
             const SizedBox(height: 16),
             RequestPhotoPanel(
@@ -685,13 +685,12 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
               repository: widget.photoRepository,
             ),
 
-
             const SizedBox(height: 16),
 
             OutlinedButton.icon(
               onPressed: _updating ? null : _editRequest,
               icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit Request'),
+              label: Text(strings.editRequest),
             ),
 
             const SizedBox(height: 12),
@@ -701,16 +700,12 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   ? null
                   : () => _confirmStatusChange(
                       status: 'completed',
-                      title: 'Mark Request Completed?',
-                      message:
-                          'Are you sure you want to mark '
-                          'this request as completed? '
-                          'You will not be able to edit '
-                          'it afterward.',
-                      confirmLabel: 'Mark Completed',
+                      title: strings.markCompletedTitle,
+                      message: strings.markCompletedMessage,
+                      confirmLabel: strings.markCompleted,
                     ),
               icon: const Icon(Icons.check_circle_outline),
-              label: const Text('Mark Completed'),
+              label: Text(strings.markCompleted),
             ),
 
             const SizedBox(height: 12),
@@ -720,27 +715,24 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   ? null
                   : () => _confirmStatusChange(
                       status: 'canceled',
-                      title: 'Cancel Request?',
-                      message:
-                          'Are you sure you want to cancel '
-                          'this request? This action '
-                          'cannot be undone.',
-                      confirmLabel: 'Cancel Request',
+                      title: strings.cancelRequestTitle,
+                      message: strings.cancelRequestMessage,
+                      confirmLabel: strings.cancelRequest,
                     ),
               icon: const Icon(Icons.cancel_outlined),
-              label: const Text('Cancel Request'),
+              label: Text(strings.cancelRequest),
             ),
           ],
 
           // Wait for GET /users/me.
           if (_loadingProfile) ...[
             const SizedBox(height: 24),
-            const Center(
+            Center(
               child: Column(
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 12),
-                  Text('Checking request ownership...'),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 12),
+                  Text(strings.checkingOwnership),
                 ],
               ),
             ),
@@ -751,8 +743,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             const SizedBox(height: 24),
 
             Text(
-              'Unable to verify request ownership: '
-              '$_profileError',
+              strings.ownershipFailure(_profileError!),
               style: TextStyle(color: theme.colorScheme.error),
             ),
 
@@ -761,7 +752,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             OutlinedButton.icon(
               onPressed: _loadingProfile ? null : _loadProfile,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry Ownership Check'),
+              label: Text(strings.retryOwnership),
             ),
           ],
 
@@ -785,11 +776,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           if (isOwner && request.isClosed) ...[
             const SizedBox(height: 24),
 
-            Text(
-              'You can no longer edit or change the '
-              'status of this request.',
-              style: theme.textTheme.bodyMedium,
-            ),
+            Text(strings.closedOwnerNotice, style: theme.textTheme.bodyMedium),
           ],
 
           const SizedBox(height: 32),
@@ -867,7 +854,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           OutlinedButton.icon(
             onPressed: () => _copyDiagnostics(request),
             icon: const Icon(Icons.copy_outlined),
-            label: const Text('Copy Diagnostics'),
+            label: Text(AppStrings.of(context).copyDiagnostics),
           ),
         ],
       ),

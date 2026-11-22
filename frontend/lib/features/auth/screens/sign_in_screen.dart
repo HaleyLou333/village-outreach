@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/localization/app_language.dart';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'create_account_screen.dart';
@@ -47,7 +50,7 @@ class _SignInScreenState extends State<SignInScreen> {
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'Unable to sign in. Please try again.');
+        setState(() => _error = AppStrings.of(context).signInFailed);
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -56,6 +59,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -71,7 +75,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     Image.asset('assets/brand/logo.png', height: 90),
                     const SizedBox(height: 20),
                     Text(
-                      'Welcome Back',
+                      strings.welcomeBack,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
@@ -85,8 +89,8 @@ class _SignInScreenState extends State<SignInScreen> {
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
-                      decoration: const InputDecoration(
-                        labelText: 'Email address',
+                      decoration: InputDecoration(
+                        labelText: strings.emailAddress,
                         prefixIcon: Icon(Icons.email_outlined),
                         border: OutlineInputBorder(),
                       ),
@@ -94,7 +98,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         final email = value?.trim() ?? '';
                         if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
                             .hasMatch(email)) {
-                          return 'Enter a valid email address';
+                          return strings.invalidEmail;
                         }
                         return null;
                       },
@@ -105,13 +109,13 @@ class _SignInScreenState extends State<SignInScreen> {
                       obscureText: _hidePassword,
                       autofillHints: const [AutofillHints.password],
                       decoration: InputDecoration(
-                        labelText: 'Password',
+                        labelText: strings.password,
                         prefixIcon: const Icon(Icons.lock_outline),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
                           tooltip: _hidePassword
-                              ? 'Show password'
-                              : 'Hide password',
+                              ? strings.showPassword
+                              : strings.hidePassword,
                           icon: Icon(
                             _hidePassword
                                 ? Icons.visibility_outlined
@@ -122,7 +126,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         ),
                       ),
                       validator: (value) => (value == null || value.isEmpty)
-                          ? 'Enter your password'
+                          ? strings.enterPassword
                           : null,
                     ),
                     if (_error != null) ...[
@@ -147,7 +151,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Sign In'),
+                            : Text(strings.signIn),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -160,7 +164,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                     CreateAccountScreen(authService: _auth),
                               ),
                             ),
-                      child: const Text('Create an account'),
+                      child: Text(strings.createAnAccount),
                     ),
                     TextButton(
                       onPressed: _loading
@@ -174,7 +178,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                 ),
                               ),
                             ),
-                      child: const Text('Forgot password?'),
+                      child: Text(strings.forgotPassword),
                     ),
                     TextButton(
                       onPressed: _loading
@@ -188,7 +192,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                 ),
                               ),
                             ),
-                      child: const Text('Resend confirmation email'),
+                      child: Text(strings.resendConfirmation),
                     ),
                   ],
                 ),

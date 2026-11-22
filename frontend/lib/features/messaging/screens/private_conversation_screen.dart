@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/localization/app_language.dart';
+
 import '../models/private_message.dart';
 import '../services/message_service.dart';
 
@@ -77,7 +79,7 @@ class _PrivateConversationScreenState extends State<PrivateConversationScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Unable to load messages. Please try again.';
+        _error = AppStrings.of(context).messagesLoadFailed;
         _loading = false;
       });
     }
@@ -104,7 +106,7 @@ class _PrivateConversationScreenState extends State<PrivateConversationScreen> {
       setState(() => _showLoadError(error));
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'Unable to load more messages.');
+      setState(() => _error = AppStrings.of(context).messagesMoreFailed);
     } finally {
       if (mounted) setState(() => _loadingOlder = false);
     }
@@ -219,12 +221,13 @@ class _PrivateConversationScreenState extends State<PrivateConversationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Private Conversation'),
+        title: Text(strings.conversationTitle),
         actions: [
           IconButton(
-            tooltip: 'Refresh messages',
+            tooltip: strings.refreshMessages,
             onPressed: _loading || _loadingOlder || _sending ? null : _refresh,
             icon: const Icon(Icons.refresh),
           ),
@@ -235,18 +238,18 @@ class _PrivateConversationScreenState extends State<PrivateConversationScreen> {
           : _accessDenied
           ? Center(
               child: Text(
-                _error ?? 'Access denied',
+                _error ?? strings.messagesAccessDenied,
                 key: const Key('access-denied'),
               ),
             )
           : Column(
               children: [
                 if (_isClosed)
-                  const Padding(
-                    padding: EdgeInsets.all(12),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
                     child: Text(
-                      'This request is closed. Messages are read-only.',
-                      key: Key('closed-banner'),
+                      strings.messagesClosed,
+                      key: const Key('closed-banner'),
                     ),
                   ),
                 if (_error != null)
@@ -264,11 +267,13 @@ class _PrivateConversationScreenState extends State<PrivateConversationScreen> {
                           key: const Key('load-older'),
                           onPressed: _loadingOlder ? null : _loadOlder,
                           child: Text(
-                            _loadingOlder ? 'Loading...' : 'Load more messages',
+                            _loadingOlder
+                                ? strings.messagesLoading
+                                : strings.messagesLoadMore,
                           ),
                         ),
                       if (_messages.isEmpty)
-                        const Center(child: Text('No messages yet.')),
+                        Center(child: Text(strings.messagesEmpty)),
                       for (final message in _messages) _messageBubble(message),
                     ],
                   ),
@@ -286,15 +291,15 @@ class _PrivateConversationScreenState extends State<PrivateConversationScreen> {
                               maxLength: 2000,
                               maxLines: 3,
                               minLines: 1,
-                              decoration: const InputDecoration(
-                                hintText: 'Write a message',
-                                border: OutlineInputBorder(),
+                              decoration: InputDecoration(
+                                hintText: strings.messagesWrite,
+                                border: const OutlineInputBorder(),
                               ),
                             ),
                           ),
                           IconButton(
                             key: const Key('send-message'),
-                            tooltip: 'Send message',
+                            tooltip: strings.messagesSend,
                             onPressed: _send,
                             icon: const Icon(Icons.send),
                           ),
@@ -310,6 +315,7 @@ class _PrivateConversationScreenState extends State<PrivateConversationScreen> {
   Widget _messageBubble(PrivateMessage message) {
     final mine = message.senderId == widget.currentUserId;
     final status = message.deliveryStatus;
+    final strings = AppStrings.of(context);
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: Card(
@@ -323,17 +329,17 @@ class _PrivateConversationScreenState extends State<PrivateConversationScreen> {
               const SizedBox(height: 4),
               Text(
                 status == MessageDeliveryStatus.sending
-                    ? 'Sending...'
+                    ? strings.messagesSending
                     : status == MessageDeliveryStatus.failed
-                    ? 'Failed'
-                    : 'Sent',
+                    ? strings.messagesFailed
+                    : strings.messagesSent,
                 style: Theme.of(context).textTheme.labelSmall,
               ),
               if (mine && status == MessageDeliveryStatus.failed && !_isClosed)
                 TextButton(
                   key: Key('retry-${message.clientMessageId}'),
                   onPressed: () => _retry(message),
-                  child: const Text('Retry'),
+                  child: Text(strings.messagesRetry),
                 ),
             ],
           ),

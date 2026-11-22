@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/localization/app_language.dart';
+
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../models/community_resource.dart';
@@ -129,9 +132,7 @@ class _ResourceScreenState extends State<ResourceScreen> {
 
       setState(() {
         _loading = false;
-        _error =
-            'Resources could not be loaded. '
-            'Please try again.';
+        _error = AppStrings.of(context).publicLoadError;
       });
     }
   }
@@ -141,7 +142,7 @@ class _ResourceScreenState extends State<ResourceScreen> {
 
     if (area.isEmpty || area.length > 100) {
       setState(() {
-        _locationMessage = 'Enter a valid city or service area.';
+        _locationMessage = AppStrings.of(context).publicAreaInvalid;
       });
       return;
     }
@@ -233,9 +234,7 @@ class _ResourceScreenState extends State<ResourceScreen> {
       }
 
       setState(() {
-        _mapError =
-            'The map is unavailable. '
-            'You can continue using the resource list.';
+        _mapError = AppStrings.of(context).publicMapError;
         _showMap = false;
         _mapController = null;
       });
@@ -293,7 +292,7 @@ class _ResourceScreenState extends State<ResourceScreen> {
         TextButton.icon(
           onPressed: () => _changeView(false),
           icon: const Icon(Icons.list),
-          label: const Text('Map not loading? Use list view'),
+          label: Text(AppStrings.of(context).publicMapFallback),
         ),
         if (_selectedResource != null)
           ResourceCard(
@@ -321,22 +320,21 @@ class _ResourceScreenState extends State<ResourceScreen> {
           Text(_error!, textAlign: TextAlign.center),
           FilledButton(
             onPressed: () => _loadResources(),
-            child: const Text('Retry'),
+            child: Text(AppStrings.of(context).retry),
           ),
         ],
       );
     }
 
     if (_resources.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
+      return Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            Icon(Icons.search_off, size: 48),
-            SizedBox(height: 12),
+            const Icon(Icons.search_off, size: 48),
+            const SizedBox(height: 12),
             Text(
-              'No resources found in this area. '
-              'Try another area or use your location.',
+              AppStrings.of(context).publicEmpty,
               textAlign: TextAlign.center,
             ),
           ],
@@ -348,7 +346,7 @@ class _ResourceScreenState extends State<ResourceScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          '${_resources.length} resources found',
+          AppStrings.of(context).publicFound(_resources.length),
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 12),
@@ -374,7 +372,7 @@ class _ResourceScreenState extends State<ResourceScreen> {
           OutlinedButton.icon(
             onPressed: () => _loadResources(append: true),
             icon: const Icon(Icons.expand_more),
-            label: const Text('Load more resources'),
+            label: Text(AppStrings.of(context).publicLoadMore),
           ),
       ],
     );
@@ -400,17 +398,30 @@ class _ResourceScreenState extends State<ResourceScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Community Resources'), actions: [
-        FutureBuilder<bool>(future: _canManageOrganizations,
-          builder: (context, snapshot) => snapshot.data == true
-            ? IconButton(tooltip: 'Organization management', icon: const Icon(Icons.business),
-                onPressed: () async {
-                  await Navigator.of(context).push(MaterialPageRoute<void>(
-                    builder: (_) => const OrganizationResourceEditorScreen()));
-                  if (mounted) await _loadResources();
-                })
-            : const SizedBox.shrink()),
-      ]),
+      appBar: AppBar(
+        title: Text(AppStrings.of(context).publicResourcesTitle),
+        actions: [
+          FutureBuilder<bool>(
+            future: _canManageOrganizations,
+            builder: (context, snapshot) => snapshot.data == true
+                ? IconButton(
+                    tooltip: AppStrings.of(context)
+                        .publicOrganizationManagement,
+                    icon: const Icon(Icons.business),
+                    onPressed: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              const OrganizationResourceEditorScreen(),
+                        ),
+                      );
+                      if (mounted) await _loadResources();
+                    },
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () => _loadResources(),
@@ -418,12 +429,12 @@ class _ResourceScreenState extends State<ResourceScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(20),
             children: [
-              Text('Find local support', style: theme.textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              const Text(
-                'Explore verified community resources '
-                'and services near you.',
+              Text(
+                AppStrings.of(context).publicResourcesHeading,
+                style: theme.textTheme.headlineSmall,
               ),
+              const SizedBox(height: 8),
+              Text(AppStrings.of(context).publicResourcesIntro),
               const SizedBox(height: 20),
 
               TextField(
@@ -433,12 +444,12 @@ class _ResourceScreenState extends State<ResourceScreen> {
                 textInputAction: TextInputAction.search,
                 onSubmitted: (_) => _searchByArea(),
                 decoration: InputDecoration(
-                  labelText: 'City or service area',
-                  hintText: 'Enter a city',
+                  labelText: AppStrings.of(context).publicAreaLabel,
+                  hintText: AppStrings.of(context).publicAreaHint,
                   counterText: '',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    tooltip: 'Search area',
+                    tooltip: AppStrings.of(context).publicSearchArea,
                     onPressed: _loading || _locating ? null : _searchByArea,
                     icon: const Icon(Icons.search),
                   ),
@@ -457,7 +468,9 @@ class _ResourceScreenState extends State<ResourceScreen> {
                       )
                     : const Icon(Icons.my_location),
                 label: Text(
-                  _locating ? 'Finding location...' : 'Use my current location',
+                  _locating
+                      ? AppStrings.of(context).publicFindingLocation
+                      : AppStrings.of(context).publicUseLocation,
                 ),
               ),
 
@@ -471,24 +484,24 @@ class _ResourceScreenState extends State<ResourceScreen> {
 
               Text(
                 _activeArea != null
-                    ? 'Showing resources in $_activeArea'
-                    : 'Showing resources within 10 km',
+                    ? AppStrings.of(context).publicShowingArea(_activeArea!)
+                    : AppStrings.of(context).publicShowingNearby,
                 style: theme.textTheme.bodySmall,
               ),
 
               const SizedBox(height: 16),
 
               SegmentedButton<bool>(
-                segments: const [
+                segments: [
                   ButtonSegment(
                     value: true,
-                    label: Text('Map'),
-                    icon: Icon(Icons.map_outlined),
+                    label: Text(AppStrings.of(context).publicMap),
+                    icon: const Icon(Icons.map_outlined),
                   ),
                   ButtonSegment(
                     value: false,
-                    label: Text('List'),
-                    icon: Icon(Icons.list),
+                    label: Text(AppStrings.of(context).publicList),
+                    icon: const Icon(Icons.list),
                   ),
                 ],
                 selected: {_showMap},

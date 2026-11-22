@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../../core/localization/app_language.dart';
+
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -51,12 +53,13 @@ class _ReportScreenState extends State<ReportScreen> {
   Future<void> _submitReport() async {
     if (_submitting) return;
 
+    final strings = AppStrings.of(context);
     final reason = _reason;
     final description = _descriptionController.text.trim();
 
     if (reason == null) {
       setState(() {
-        _error = 'Please select a reason for reporting.';
+        _error = strings.reportReasonRequired;
       });
       return;
     }
@@ -144,6 +147,7 @@ class _ReportScreenState extends State<ReportScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final strings = AppStrings.of(context);
 
     final targetTypeLabel = widget.targetType == ReportTargetType.request
         ? 'Request'
@@ -152,43 +156,42 @@ class _ReportScreenState extends State<ReportScreen> {
     return PopScope(
       canPop: !_submitting,
       child: Scaffold(
-        appBar: AppBar(title: const Text('Submit a Report')),
+        appBar: AppBar(title: Text(strings.reportSubmitTitle)),
         body: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
               Text(
-                'Help keep our community safe',
+                strings.reportSafetyHeading,
                 style: theme.textTheme.headlineSmall,
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Use this form to report inappropriate '
-                'behavior, unsafe content, or other '
-                'community safety concerns.',
-              ),
+              Text(strings.reportSafetyDescription),
               const SizedBox(height: 20),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.flag_outlined),
-                  title: Text('Reporting $targetTypeLabel'),
+                  title: Text(strings.reportTargetLabel(targetTypeLabel)),
                   subtitle: Text(widget.targetLabel),
                 ),
               ),
               const SizedBox(height: 24),
-              Text('Reason for reporting', style: theme.textTheme.titleMedium),
+              Text(
+                strings.reportReasonHeading,
+                style: theme.textTheme.titleMedium,
+              ),
               const SizedBox(height: 12),
               DropdownButtonFormField<ReportReason>(
                 initialValue: _reason,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Select a reason',
+                decoration: InputDecoration(
+                  labelText: strings.reportReasonSelect,
                   border: OutlineInputBorder(),
                 ),
                 items: ReportReason.values.map((reason) {
                   return DropdownMenuItem(
                     value: reason,
-                    child: Text(reason.label),
+                    child: Text(strings.reportReasonLabel(reason.apiValue)),
                   );
                 }).toList(),
                 onChanged: _submitting
@@ -207,9 +210,9 @@ class _ReportScreenState extends State<ReportScreen> {
                 maxLength: 1000,
                 minLines: 4,
                 maxLines: 6,
-                decoration: const InputDecoration(
-                  labelText: 'Additional details (optional)',
-                  hintText: 'Describe your concern...',
+                decoration: InputDecoration(
+                  labelText: strings.reportDetailsLabel,
+                  hintText: strings.reportDetailsHint,
                   alignLabelWithHint: true,
                   border: OutlineInputBorder(),
                 ),
@@ -231,7 +234,7 @@ class _ReportScreenState extends State<ReportScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Immediate danger?',
+                              strings.reportImmediateHeading,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: theme.colorScheme.onErrorContainer,
@@ -274,14 +277,18 @@ class _ReportScreenState extends State<ReportScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.flag_outlined),
-                label: Text(_submitting ? 'Submitting...' : 'Submit Report'),
+                label: Text(
+                  _submitting
+                      ? strings.reportSubmitting
+                      : strings.reportSubmitButton,
+                ),
               ),
               const SizedBox(height: 8),
               TextButton(
                 onPressed: _submitting
                     ? null
                     : () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
+                child: Text(strings.reportCancel),
               ),
             ],
           ),

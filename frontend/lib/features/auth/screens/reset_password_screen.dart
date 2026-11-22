@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_language.dart';
+
 import '../auth_service.dart';
 import '../auth_feedback.dart';
 import 'email_action_screen.dart';
@@ -57,8 +59,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Choose a new password')),
+      appBar: AppBar(title: Text(strings.chooseNewPassword)),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -71,57 +74,55 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: _saved
                       ? [
-                          const AuthFeedback(
-                            title: 'Password updated',
-                            message: 'Your new password is saved. Use it the next time you sign in. You can continue to Village Outreach now.',
+                          AuthFeedback(
+                            title: strings.passwordUpdated,
+                            message: strings.passwordSavedMessage,
                           ),
                           const SizedBox(height: 24),
                           FilledButton(
                             onPressed: widget.onCompleted,
-                            child: const Text('Continue to Village Outreach'),
+                            child: Text(strings.continueVillage),
                           ),
                         ]
                       : [
-                          const AuthFeedback(
-                            title: 'Reset link verified',
-                            message: 'Choose a new password to finish resetting your account.',
+                          AuthFeedback(
+                            title: strings.resetVerified,
+                            message: strings.choosePasswordInstruction,
                             icon: Icons.lock_open_outlined,
                           ),
                           const SizedBox(height: 20),
-                          const Text(
-                            'Use at least 8 characters and a password different from your current one.',
-                          ),
+                          Text(strings.passwordRule),
                           const SizedBox(height: 20),
                           TextFormField(
                             controller: _password,
                             obscureText: true,
                             enabled: !_saving,
                             autofillHints: const [AutofillHints.newPassword],
-                            decoration: const InputDecoration(
-                              labelText: 'New password',
+                            decoration: InputDecoration(
+                              labelText: strings.newPassword,
                               border: OutlineInputBorder(),
                             ),
                             validator: (value) => (value?.length ?? 0) >= 8
                                 ? null
-                                : 'Use at least 8 characters.',
+                                : strings.minEightPeriod,
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
                             controller: _confirmation,
                             obscureText: true,
                             enabled: !_saving,
-                            decoration: const InputDecoration(
-                              labelText: 'Confirm new password',
+                            decoration: InputDecoration(
+                              labelText: strings.confirmNewPassword,
                               border: OutlineInputBorder(),
                             ),
                             validator: (value) => value == _password.text
                                 ? null
-                                : 'Passwords must match.',
+                                : strings.passwordMismatch,
                           ),
                           if (_error != null) ...[
                             const SizedBox(height: 16),
                             AuthFeedback(
-                              title: 'Password not updated',
+                              title: strings.passwordNotUpdated,
                               message: _error!,
                               error: true,
                             ),
@@ -130,8 +131,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           FilledButton(
                             onPressed: _saving ? null : _save,
                             child: _saving
-                                ? const AuthBusyLabel('Updating password...')
-                                : const Text('Update password'),
+                                ? AuthBusyLabel(strings.updatingPassword)
+                                : Text(strings.updatePassword),
                           ),
                           TextButton(
                             onPressed: _saving
@@ -147,7 +148,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                       ),
                                     ),
                                   ),
-                            child: const Text('Request another reset email'),
+                            child: Text(strings.anotherResetEmail),
                           ),
                         ],
                 ),

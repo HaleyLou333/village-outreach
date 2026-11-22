@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/localization/app_language.dart';
+
 import '../models/help_request.dart';
 import '../services/request_service.dart';
 
@@ -105,16 +107,16 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
     final trimmed = value?.trim() ?? '';
 
     if (trimmed.isEmpty) {
-      return '$fieldName is required.';
+      return AppStrings.of(context).requiredField(fieldName);
     }
 
     if (trimmed.length > maxLength) {
-      return '$fieldName must be $maxLength characters or fewer.';
+      return AppStrings.of(context).maxLengthField(fieldName, maxLength);
     }
 
     if (trimmed.contains('\u0000') ||
         trimmed.runes.any((rune) => rune >= 0xD800 && rune <= 0xDFFF)) {
-      return '$fieldName contains unsupported characters.';
+      return AppStrings.of(context).unsupportedField(fieldName);
     }
 
     return null;
@@ -239,7 +241,7 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
       if (!mounted) return;
 
       setState(() {
-        _error = 'Unable to save the request. Please try again.';
+        _error = AppStrings.of(context).saveRequestError;
       });
     } finally {
       if (mounted) {
@@ -252,7 +254,8 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final title = _isEditing ? 'Edit Request' : 'Request Help';
+    final strings = AppStrings.of(context);
+    final title = _isEditing ? strings.editRequest : strings.requestHelp;
 
     return PopScope(
       canPop: !_saving,
@@ -266,8 +269,8 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
             children: [
               Text(
                 _isEditing
-                    ? 'Update your request details.'
-                    : 'Tell your neighbors what help you need.',
+                    ? strings.updateRequestIntro
+                    : strings.createRequestIntro,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 24),
@@ -277,12 +280,13 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
                 enabled: !_saving,
                 maxLength: 120,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Request title',
-                  hintText: 'Need help picking up groceries',
+                decoration: InputDecoration(
+                  labelText: strings.requestTitle,
+                  hintText: strings.requestTitleHint,
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) => _validateText(value, 'Title', 120),
+                validator: (value) =>
+                    _validateText(value, strings.titleField, 120),
               ),
 
               const SizedBox(height: 12),
@@ -290,15 +294,15 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
               DropdownButtonFormField<String>(
                 // Updated for current Flutter versions.
                 initialValue: _category,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
+                decoration: InputDecoration(
+                  labelText: strings.categoryField,
                   border: OutlineInputBorder(),
                 ),
                 items: requestCategories.entries
                     .map(
                       (entry) => DropdownMenuItem(
                         value: entry.key,
-                        child: Text(entry.value),
+                        child: Text(strings.requestCategory(entry.key)),
                       ),
                     )
                     .toList(),
@@ -308,7 +312,7 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
                         setState(() => _category = value);
                       },
                 validator: (value) =>
-                    value == null ? 'Select a category.' : null,
+                    value == null ? strings.selectCategory : null,
               ),
 
               const SizedBox(height: 24),
@@ -320,13 +324,14 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
                 minLines: 4,
                 maxLines: 8,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  hintText: 'Describe the help you need...',
+                decoration: InputDecoration(
+                  labelText: strings.descriptionField,
+                  hintText: strings.descriptionHint,
                   border: OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
-                validator: (value) => _validateText(value, 'Description', 4000),
+                validator: (value) =>
+                    _validateText(value, strings.descriptionField, 4000),
               ),
 
               const SizedBox(height: 12),
@@ -334,15 +339,18 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
               DropdownButtonFormField<String>(
                 // Updated for current Flutter versions.
                 initialValue: _urgency,
-                decoration: const InputDecoration(
-                  labelText: 'Urgency',
+                decoration: InputDecoration(
+                  labelText: strings.urgencyField,
                   border: OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'standard', child: Text('Standard')),
+                items: [
+                  DropdownMenuItem(
+                    value: 'standard',
+                    child: Text(strings.standardUrgency),
+                  ),
                   DropdownMenuItem(
                     value: 'time_sensitive',
-                    child: Text('Time-sensitive'),
+                    child: Text(strings.timeSensitiveUrgency),
                   ),
                 ],
                 onChanged: _saving
@@ -359,8 +367,8 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
               DropdownButtonFormField<RequestArea>(
                 // Updated for current Flutter versions.
                 initialValue: _area,
-                decoration: const InputDecoration(
-                  labelText: 'Area',
+                decoration: InputDecoration(
+                  labelText: strings.areaField,
                   border: OutlineInputBorder(),
                 ),
                 items: _availableAreas
@@ -374,7 +382,7 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
                     : (value) {
                         setState(() => _area = value);
                       },
-                validator: (value) => value == null ? 'Select an area.' : null,
+                validator: (value) => value == null ? strings.selectArea : null,
               ),
 
               const SizedBox(height: 12),

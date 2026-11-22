@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/localization/app_language.dart';
 import '../../core/theme/app_typography.dart';
 
 class BrandPreviewScreen extends StatelessWidget {
@@ -9,6 +10,7 @@ class BrandPreviewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final strings = AppStrings.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Village Outreach')),
@@ -23,22 +25,15 @@ class BrandPreviewScreen extends StatelessWidget {
                 height: 86,
                 filterQuality: FilterQuality.high,
                 errorBuilder: (context, error, stackTrace) {
-                  return const Text('Logo failed to load');
+                  return Text(strings.brandLogoFailed);
                 },
               ),
             ),
             const SizedBox(height: 20),
-            Text(
-              'Neighbors Helping Neighbors',
-              style: theme.textTheme.headlineMedium,
-            ),
+            Text(strings.brandTagline, style: theme.textTheme.headlineMedium),
             const SizedBox(height: 12),
 
-            Text(
-              'Find local support, connect with volunteers, '
-              'and help strengthen your community.',
-              style: theme.textTheme.bodyLarge,
-            ),
+            Text(strings.brandDescription, style: theme.textTheme.bodyLarge),
             const SizedBox(height: 24),
 
             Card(
@@ -48,13 +43,12 @@ class BrandPreviewScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Community Support',
+                      strings.brandCommunitySupport,
                       style: theme.textTheme.titleLarge,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Explore nearby resources and opportunities '
-                      'to help your neighbors.',
+                      strings.brandCommunityDescription,
                       style: theme.textTheme.bodyLarge,
                     ),
                   ],
@@ -65,14 +59,14 @@ class BrandPreviewScreen extends StatelessWidget {
 
             ElevatedButton(
               onPressed: () {},
-              child: const Text('Request Support'),
+              child: Text(strings.brandRequestSupport),
             ),
             const SizedBox(height: 12),
 
-            OutlinedButton(onPressed: () {}, child: const Text('Offer Help')),
+            OutlinedButton(onPressed: () {}, child: Text(strings.offerHelp)),
             const SizedBox(height: 24),
 
-            Text('Brand Colors', style: theme.textTheme.titleLarge),
+            Text(strings.brandColors, style: theme.textTheme.titleLarge),
             const SizedBox(height: 12),
 
             const Wrap(
@@ -95,7 +89,7 @@ class BrandPreviewScreen extends StatelessWidget {
             const SizedBox(height: 8),
 
             Text(
-              'Stronger Neighbors. Brighter Tomorrows.',
+              strings.brandClosingTagline,
               style: theme.textTheme.bodyMedium,
             ),
           ],

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_language.dart';
+
 import '../models/community_resource.dart';
 
 class ResourceCard extends StatelessWidget {
@@ -44,7 +46,8 @@ class ResourceCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Last verified: ${resource.verificationDate}',
+                AppStrings.of(context)
+                    .publicVerifiedDate(resource.verificationDate),
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 8),
@@ -52,7 +55,7 @@ class ResourceCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Text(
-                    'View details',
+                    AppStrings.of(context).publicViewDetails,
                     style: TextStyle(
                       color: theme.colorScheme.primary,
                       fontWeight: FontWeight.w600,
