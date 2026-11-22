@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../models/community_resource.dart';
@@ -31,26 +30,16 @@ class ResourceCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Chip(
-                label: Text(resource.categoryLabel),
-              ),
+              Chip(label: Text(resource.categoryLabel)),
               const SizedBox(height: 8),
-              Text(
-                resource.name,
-                style: theme.textTheme.titleMedium,
-              ),
+              Text(resource.name, style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.location_on_outlined,
-                    size: 18,
-                  ),
+                  const Icon(Icons.location_on_outlined, size: 18),
                   const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(resource.address),
-                  ),
+                  Expanded(child: Text(resource.address)),
                 ],
               ),
               const SizedBox(height: 8),

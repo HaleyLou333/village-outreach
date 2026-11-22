@@ -6,6 +6,8 @@ import '../services/location_service.dart';
 import '../services/resource_service.dart';
 import '../widgets/resource_card.dart';
 import 'resource_detail_screen.dart';
+import 'organization_resource_editor_screen.dart';
+import '../services/organization_resource_service.dart';
 
 class ResourceScreen extends StatefulWidget {
   final ResourceRepository? repository;
@@ -43,6 +45,19 @@ class _ResourceScreenState extends State<ResourceScreen> {
   double? _longitude;
 
   int _generation = 0;
+  late final Future<bool> _canManageOrganizations;
+
+  Future<bool> _checkManagementAccess() async {
+    OrganizationResourceService? service;
+    try {
+      service = OrganizationResourceService();
+      return (await service.memberships()).any((m) => m.canManage);
+    } catch (_) {
+      return false;
+    } finally {
+      service?.dispose();
+    }
+  }
 
   static const _pageSize = 100;
 
@@ -50,6 +65,7 @@ class _ResourceScreenState extends State<ResourceScreen> {
   void initState() {
     super.initState();
 
+    _canManageOrganizations = _checkManagementAccess();
     _ownsRepository = widget.repository == null;
 
     _repository = widget.repository ?? ResourceService();
@@ -384,7 +400,17 @@ class _ResourceScreenState extends State<ResourceScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Community Resources')),
+      appBar: AppBar(title: const Text('Community Resources'), actions: [
+        FutureBuilder<bool>(future: _canManageOrganizations,
+          builder: (context, snapshot) => snapshot.data == true
+            ? IconButton(tooltip: 'Organization management', icon: const Icon(Icons.business),
+                onPressed: () async {
+                  await Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => const OrganizationResourceEditorScreen()));
+                  if (mounted) await _loadResources();
+                })
+            : const SizedBox.shrink()),
+      ]),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () => _loadResources(),
