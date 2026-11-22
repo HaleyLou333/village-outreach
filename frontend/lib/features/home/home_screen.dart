@@ -9,6 +9,7 @@ import '../requests/screens/request_form_screen.dart';
 import '../requests/services/request_service.dart';
 import '../requests/widgets/request_card.dart';
 import '../resources/screens/resource_screen.dart';
+import '../notifications/screens/notification_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final RequestRepository? requestRepository;
@@ -307,8 +308,15 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Notifications - coming soon',
-            onPressed: null,
+            key: const Key('open-notifications'),
+            tooltip: 'Notifications',
+            onPressed: () async {
+              await Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => const NotificationScreen(),
+                ),
+              );
+            },
             icon: const Icon(Icons.notifications_outlined),
           ),
 
