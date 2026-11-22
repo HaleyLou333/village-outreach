@@ -13,6 +13,8 @@ import '../../messaging/services/message_service.dart';
 import '../models/help_request.dart';
 import '../services/request_service.dart';
 import 'request_form_screen.dart';
+import '../photos/request_photo_panel.dart';
+import '../photos/request_photo_repository.dart';
 
 class RequestDetailScreen extends StatefulWidget {
   final String requestId;
@@ -24,6 +26,7 @@ class RequestDetailScreen extends StatefulWidget {
   final OfferRepository? offerRepository;
   final MessageRepository? messageRepository;
   final ReportRepository? reportRepository;
+  final RequestPhotoRepository? photoRepository;
 
   const RequestDetailScreen({
     super.key,
@@ -34,6 +37,7 @@ class RequestDetailScreen extends StatefulWidget {
     this.offerRepository,
     this.messageRepository,
     this.reportRepository,
+    this.photoRepository,
   });
 
   @override
@@ -673,6 +677,14 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             const SizedBox(height: 16),
 
             Text('Manage Your Request', style: theme.textTheme.titleLarge),
+
+            const SizedBox(height: 16),
+            RequestPhotoPanel(
+              key: ValueKey('request-photo-${request.id}'),
+              requestId: request.id,
+              repository: widget.photoRepository,
+            ),
+
 
             const SizedBox(height: 16),
 
