@@ -9,6 +9,7 @@ import '../services/location_service.dart';
 import '../services/resource_service.dart';
 import '../widgets/resource_card.dart';
 import 'resource_detail_screen.dart';
+import 'resource_guide_screen.dart';
 import 'organization_resource_editor_screen.dart';
 import '../services/organization_resource_service.dart';
 
@@ -401,6 +402,15 @@ class _ResourceScreenState extends State<ResourceScreen> {
       appBar: AppBar(
         title: Text(AppStrings.of(context).publicResourcesTitle),
         actions: [
+          IconButton(
+            tooltip: 'Browse resource guides',
+            icon: const Icon(Icons.menu_book_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const ResourceGuideScreen(),
+              ),
+            ),
+          ),
           FutureBuilder<bool>(
             future: _canManageOrganizations,
             builder: (context, snapshot) => snapshot.data == true

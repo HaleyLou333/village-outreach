@@ -44,6 +44,7 @@ dependencies:
   shared_preferences: ^2.5.6
   flutter_localizations:
     sdk: flutter
+  speech_to_text: ^7.5.0
 
 dev_dependencies:
   flutter_test:

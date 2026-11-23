@@ -841,6 +841,40 @@ class AppStrings {
       ? 'Conecta con tus vecinos para pedir ayuda, ofrecer apoyo y encontrar recursos en tu comunidad.'
       : 'Connect with neighbors to request help, offer support, and find resources in your community.';
 
+  // CCVO-92: Accessible, reviewed device voice input.
+  String get voiceUnavailable => spanish
+      ? 'La entrada de voz no está disponible. Puedes escribir.'
+      : 'Voice input is unavailable. You can still type.';
+  String get voicePermissionFailed => spanish
+      ? 'No se pudo acceder al micrófono. Puedes escribir.'
+      : 'Microphone access failed. You can still type.';
+  String get voiceReviewTitle =>
+      spanish ? 'Revisar transcripción de voz' : 'Review voice transcript';
+  String get voiceEditTranscript => spanish
+      ? 'Edita la transcripción antes de agregarla'
+      : 'Edit transcript before adding';
+  String get voiceDiscard => spanish ? 'Descartar' : 'Discard';
+  String get voiceAddDescription =>
+      spanish ? 'Agregar a la descripción' : 'Add to description';
+  String get voiceStopAndReview => spanish
+      ? 'Detener y revisar la entrada de voz'
+      : 'Stop and review voice input';
+  String get voiceDictateDescription => spanish
+      ? 'Dictar descripción (opcional)'
+      : 'Dictate description (optional)';
+  String get voiceStartSemantics => spanish
+      ? 'Iniciar dictado de voz opcional'
+      : 'Start optional voice dictation';
+  String get voiceStopSemantics => spanish
+      ? 'Detener grabación y revisar transcripción'
+      : 'Stop recording and review transcript';
+  String get requestAreaExplanation => spanish
+      ? 'El área seleccionada se utiliza para mostrar tu solicitud a vecinos cercanos.'
+      : 'Your selected area is used to display your request to nearby neighbors.';
+  String get requestSaving => spanish ? 'Guardando...' : 'Saving...';
+  String get requestSaveChanges => spanish ? 'Guardar cambios' : 'Save Changes';
+  String get requestSubmit => spanish ? 'Enviar solicitud' : 'Submit Request';
+
   static AppStrings of(BuildContext context) => AppStrings(
     AppLanguageScope.maybeOf(context)?.locale.languageCode ?? 'en',
   );

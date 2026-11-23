@@ -1,6 +1,9 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- CCVO-92: Optional device speech recognition -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- Network access -->
     <uses-permission
         android:name="android.permission.INTERNET" />
@@ -66,6 +69,9 @@
     </application>
 
     <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />

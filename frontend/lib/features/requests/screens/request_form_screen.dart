@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/localization/app_language.dart';
+import '../../../core/accessibility/reviewed_voice_input.dart';
 
 import '../models/help_request.dart';
 import '../services/request_service.dart';
@@ -292,6 +293,7 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
               const SizedBox(height: 12),
 
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 // Updated for current Flutter versions.
                 initialValue: _category,
                 decoration: InputDecoration(
@@ -302,7 +304,10 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
                     .map(
                       (entry) => DropdownMenuItem(
                         value: entry.key,
-                        child: Text(strings.requestCategory(entry.key)),
+                        child: Text(
+                          strings.requestCategory(entry.key),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     )
                     .toList(),
@@ -335,8 +340,24 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
               ),
 
               const SizedBox(height: 12),
+              ReviewedVoiceInput(
+                enabled: !_saving,
+                onAccepted: (transcript) {
+                  final previous = _descriptionController.text.trim();
+                  _descriptionController.text = previous.isEmpty
+                      ? transcript
+                      : '$previous\n$transcript';
+                  _descriptionController.selection = TextSelection.collapsed(
+                    offset: _descriptionController.text.length,
+                  );
+                  _onFormChanged();
+                },
+              ),
+
+              const SizedBox(height: 12),
 
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 // Updated for current Flutter versions.
                 initialValue: _urgency,
                 decoration: InputDecoration(
@@ -346,11 +367,17 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
                 items: [
                   DropdownMenuItem(
                     value: 'standard',
-                    child: Text(strings.standardUrgency),
+                    child: Text(
+                      strings.standardUrgency,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   DropdownMenuItem(
                     value: 'time_sensitive',
-                    child: Text(strings.timeSensitiveUrgency),
+                    child: Text(
+                      strings.timeSensitiveUrgency,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
                 onChanged: _saving
@@ -365,6 +392,7 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
               const SizedBox(height: 24),
 
               DropdownButtonFormField<RequestArea>(
+                isExpanded: true,
                 // Updated for current Flutter versions.
                 initialValue: _area,
                 decoration: InputDecoration(
@@ -373,8 +401,10 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
                 ),
                 items: _availableAreas
                     .map(
-                      (area) =>
-                          DropdownMenuItem(value: area, child: Text(area.name)),
+                      (area) => DropdownMenuItem(
+                        value: area,
+                        child: Text(area.name, overflow: TextOverflow.ellipsis),
+                      ),
                     )
                     .toList(),
                 onChanged: _saving
@@ -414,10 +444,10 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
                     : const Icon(Icons.send_outlined),
                 label: Text(
                   _saving
-                      ? 'Saving...'
+                      ? strings.requestSaving
                       : _isEditing
-                      ? 'Save Changes'
-                      : 'Submit Request',
+                      ? strings.requestSaveChanges
+                      : strings.requestSubmit,
                 ),
               ),
 
