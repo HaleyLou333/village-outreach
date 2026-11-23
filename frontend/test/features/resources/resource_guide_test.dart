@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:village_outreach/core/localization/app_language.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:village_outreach/features/resources/models/resource_guide.dart';
 import 'package:village_outreach/features/resources/screens/resource_guide_screen.dart';
@@ -30,6 +31,26 @@ class FakeGuides implements ResourceGuideRepository {
 }
 
 void main() {
+  test('resource guide labels support English and Spanish', () {
+    expect(AppStrings('en').guideBrowse, 'Resource guides');
+    expect(AppStrings('es').guideBrowse, 'Guías de recursos');
+    expect(AppStrings('es').guideOpenSource, 'Abrir fuente');
+  });
+
+  testWidgets('detail failure offers retry', (tester) async {
+    final repository = _FailingDetailRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ResourceGuideDetailScreen(id: 'missing', repository: repository),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Retry'), findsOneWidget);
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(repository.calls, 2);
+  });
+
   test('guide parses the published API shape', () {
     final guide = ResourceGuide.fromJson({
       'id': 'guide-1',
@@ -76,4 +97,21 @@ void main() {
     expect(find.text('Find food nearby.'), findsOneWidget);
     expect(find.text('Source reviewed: 2026-11-01'), findsOneWidget);
   });
+}
+
+class _FailingDetailRepository implements ResourceGuideRepository {
+  int calls = 0;
+  @override
+  Future<ResourceGuide> detail(String id) async {
+    calls++;
+    throw StateError('Unavailable');
+  }
+
+  @override
+  Future<List<ResourceGuide>> list({
+    String? area,
+    String? category,
+    int limit = 20,
+    int offset = 0,
+  }) async => [];
 }

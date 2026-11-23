@@ -403,7 +403,7 @@ class _ResourceScreenState extends State<ResourceScreen> {
         title: Text(AppStrings.of(context).publicResourcesTitle),
         actions: [
           IconButton(
-            tooltip: 'Browse resource guides',
+            tooltip: AppStrings.of(context).guideBrowseTooltip,
             icon: const Icon(Icons.menu_book_outlined),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(

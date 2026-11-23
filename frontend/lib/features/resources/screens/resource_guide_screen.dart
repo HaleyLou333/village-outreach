@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/localization/app_language.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/resource_guide.dart';
@@ -50,7 +53,7 @@ class _ResourceGuideScreenState extends State<ResourceGuideScreen> {
       if (!mounted || generation != _generation) return;
       setState(() {
         _loading = false;
-        _error = 'Unable to load guides. Try again.';
+        _error = AppStrings.of(context).guideLoadError;
       });
     }
   }
@@ -68,31 +71,31 @@ class _ResourceGuideScreenState extends State<ResourceGuideScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Resource guides')),
+    appBar: AppBar(title: Text(AppStrings.of(context).guideBrowse)),
     body: SafeArea(
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           TextField(
             controller: _area,
-            decoration: const InputDecoration(
-              labelText: 'Area',
+            decoration: InputDecoration(
+              labelText: AppStrings.of(context).guideArea,
               border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _category,
-            decoration: const InputDecoration(
-              labelText: 'Category (optional)',
-              hintText: 'e.g. food_assistance',
+            decoration: InputDecoration(
+              labelText: AppStrings.of(context).guideCategory,
+              hintText: AppStrings.of(context).guideCategoryHint,
               border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
           FilledButton(
             onPressed: _loading ? null : () => _load(),
-            child: const Text('Search guides'),
+            child: Text(AppStrings.of(context).guideSearch),
           ),
           if (_loading)
             const Center(
@@ -108,17 +111,17 @@ class _ResourceGuideScreenState extends State<ResourceGuideScreen> {
             ),
             OutlinedButton(
               onPressed: () => _load(),
-              child: const Text('Retry'),
+              child: Text(AppStrings.of(context).guideRetry),
             ),
           ],
           if (!_loading && _error == null && _guides.isEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Text('No published guides match your search.'),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Text(AppStrings.of(context).guideEmpty),
             ),
             OutlinedButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Return to resource search'),
+              child: Text(AppStrings.of(context).guideReturn),
             ),
           ],
           for (final guide in _guides)
@@ -126,7 +129,7 @@ class _ResourceGuideScreenState extends State<ResourceGuideScreen> {
               child: ListTile(
                 title: Text(guide.title),
                 subtitle: Text(
-                  '${guide.area} · ${guide.category} · Reviewed ${_date(guide.reviewedAt)}',
+                  '${guide.area} · ${guide.category} · ${AppStrings.of(context).guideReviewed} ${_date(guide.reviewedAt)}',
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
@@ -142,7 +145,7 @@ class _ResourceGuideScreenState extends State<ResourceGuideScreen> {
           if (_hasMore && !_loading)
             OutlinedButton(
               onPressed: () => _load(more: true),
-              child: const Text('Load more'),
+              child: Text(AppStrings.of(context).guideLoadMore),
             ),
         ],
       ),
@@ -167,11 +170,22 @@ class ResourceGuideDetailScreen extends StatefulWidget {
 }
 
 class _ResourceGuideDetailScreenState extends State<ResourceGuideDetailScreen> {
-  late final Future<ResourceGuide> _future;
+  late Future<ResourceGuide?> _future;
+
+  // Convert repository failures into an explicit unavailable result.
+  // This also prevents asynchronous failures from escaping the widget test zone.
+  Future<ResourceGuide?> _fetchDetail() async {
+    try {
+      return await widget.repository.detail(widget.id);
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _future = widget.repository.detail(widget.id);
+    _future = _fetchDetail();
   }
 
   Future<void> _openSource(String value) async {
@@ -193,25 +207,38 @@ class _ResourceGuideDetailScreenState extends State<ResourceGuideDetailScreen> {
 
   void _showError() {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Unable to open this link.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppStrings.of(context).guideOpenError)),
+    );
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Guide details')),
+    appBar: AppBar(title: Text(AppStrings.of(context).guideDetailTitle)),
     body: SafeArea(
-      child: FutureBuilder<ResourceGuide>(
+      child: FutureBuilder<ResourceGuide?>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError || !snapshot.hasData) {
-            return const Center(
-              child: Text(
-                'Guide unavailable. Return to the list and try again.',
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(AppStrings.of(context).guideUnavailable),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: () => setState(() {
+                        _future = _fetchDetail();
+                      }),
+                      child: Text(AppStrings.of(context).guideRetry),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -225,14 +252,16 @@ class _ResourceGuideDetailScreenState extends State<ResourceGuideDetailScreen> {
               ),
               const SizedBox(height: 8),
               Text('${guide.area} · ${guide.category}'),
-              Text('Source reviewed: ${_date(guide.reviewedAt)}'),
+              Text(
+                '${AppStrings.of(context).guideSourceReviewed}: ${_date(guide.reviewedAt)}',
+              ),
               const SizedBox(height: 20),
               SelectableText(guide.body ?? ''),
               const SizedBox(height: 20),
               OutlinedButton.icon(
                 onPressed: () => _openSource(guide.sourceUrl),
                 icon: const Icon(Icons.open_in_new),
-                label: const Text('Open source'),
+                label: Text(AppStrings.of(context).guideOpenSource),
               ),
             ],
           );

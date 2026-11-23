@@ -875,6 +875,39 @@ class AppStrings {
   String get requestSaveChanges => spanish ? 'Guardar cambios' : 'Save Changes';
   String get requestSubmit => spanish ? 'Enviar solicitud' : 'Submit Request';
 
+  // CCVO-97: Published resource guide surfaces.
+  String get guideBrowse => spanish ? 'Guías de recursos' : 'Resource guides';
+  String get guideArea => spanish ? 'Área' : 'Area';
+  String get guideCategory =>
+      spanish ? 'Categoría (opcional)' : 'Category (optional)';
+  String get guideCategoryHint =>
+      spanish ? 'p. ej., food_assistance' : 'e.g. food_assistance';
+  String get guideSearch => spanish ? 'Buscar guías' : 'Search guides';
+  String get guideLoadError => spanish
+      ? 'No se pudieron cargar las guías. Inténtalo de nuevo.'
+      : 'Unable to load guides. Try again.';
+  String get guideRetry => spanish ? 'Reintentar' : 'Retry';
+  String get guideEmpty => spanish
+      ? 'No hay guías publicadas que coincidan con tu búsqueda.'
+      : 'No published guides match your search.';
+  String get guideReturn => spanish
+      ? 'Volver a la búsqueda de recursos'
+      : 'Return to resource search';
+  String get guideLoadMore => spanish ? 'Cargar más' : 'Load more';
+  String get guideReviewed => spanish ? 'Revisado' : 'Reviewed';
+  String get guideDetailTitle =>
+      spanish ? 'Detalles de la guía' : 'Guide details';
+  String get guideSourceReviewed =>
+      spanish ? 'Fuente revisada' : 'Source reviewed';
+  String get guideUnavailable => spanish
+      ? 'Guía no disponible. Vuelve a la lista e inténtalo de nuevo.'
+      : 'Guide unavailable. Return to the list and try again.';
+  String get guideOpenSource => spanish ? 'Abrir fuente' : 'Open source';
+  String get guideOpenError =>
+      spanish ? 'No se puede abrir este enlace.' : 'Unable to open this link.';
+  String get guideBrowseTooltip =>
+      spanish ? 'Explorar guías de recursos' : 'Browse resource guides';
+
   static AppStrings of(BuildContext context) => AppStrings(
     AppLanguageScope.maybeOf(context)?.locale.languageCode ?? 'en',
   );
