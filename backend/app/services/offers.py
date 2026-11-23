@@ -9,8 +9,8 @@ from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.models import HelpRequest, Offer
-from app.schemas.offers import OfferCreate, OfferResponse
+from app.models import HelpRequest, Notification, Offer, User
+from app.schemas.offers import ListedOffer, OfferCreate, OfferResponse
 
 
 def payload_hash(data) -> str:
@@ -77,22 +77,42 @@ def create_offer(
             return OfferResponse.model_validate(previous), False
         raise HTTPException(409, "Duplicate pending offer or reused idempotency key.")
     result = OfferResponse.model_validate(session.get(Offer, inserted))
+    session.add(
+        Notification(
+            recipient_id=request.requester_id, request_id=request.id, type="offer_received"
+        )
+    )
     session.commit()
     return result, True
 
 
 def list_offers(
     session: Session, request_id: UUID, user_id: UUID, limit: int, offset: int
-) -> list[OfferResponse]:
+) -> list[ListedOffer]:
     request = session.get(HelpRequest, request_id)
     if request is None:
         raise HTTPException(404, "Request not found.")
-    query = select(Offer).where(Offer.request_id == request_id)
+    query = (
+        select(Offer, User)
+        .join(User, User.id == Offer.helper_id)
+        .where(Offer.request_id == request_id)
+    )
     if user_id != request.requester_id:
         query = query.where(Offer.helper_id == user_id)
     return [
-        OfferResponse.model_validate(row)
-        for row in session.scalars(
+        ListedOffer(
+            **OfferResponse.model_validate(row).model_dump(),
+            helper_display_name=(
+                helper.display_name
+                if helper.status == "active"
+                and (
+                    row.status == "accepted"
+                    or (request.status == "active" and row.status == "pending")
+                )
+                else None
+            ),
+        )
+        for row, helper in session.execute(
             query.order_by(Offer.created_at, Offer.id).limit(limit).offset(offset)
         )
     ]
@@ -125,5 +145,8 @@ def accept_offer(session: Session, offer_id: UUID, owner_id: UUID) -> OfferRespo
     row.status = "accepted"
     session.flush()
     result = OfferResponse.model_validate(row)
+    session.add(
+        Notification(recipient_id=row.helper_id, request_id=request_id, type="offer_accepted")
+    )
     session.commit()
     return result

@@ -9,11 +9,17 @@ import '../requests/screens/request_form_screen.dart';
 import '../requests/services/request_service.dart';
 import '../requests/widgets/request_card.dart';
 import '../resources/screens/resource_screen.dart';
+import '../resources/services/location_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final RequestRepository? requestRepository;
+  final ResourceLocationRepository? locationRepository;
 
-  const HomeScreen({super.key, this.requestRepository});
+  const HomeScreen({
+    super.key,
+    this.requestRepository,
+    this.locationRepository,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -24,6 +30,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final _nearbySection = GlobalKey();
 
   RequestArea _searchArea = requestAreas.first;
+  bool _locating = false;
+  bool _usingCurrentLocation = false;
+  String? _locationMessage;
   int _feedGeneration = 0;
 
   late final RequestRepository _requestService;
@@ -45,7 +54,37 @@ class _HomeScreenState extends State<HomeScreen> {
     _ownsService = widget.requestRepository == null;
     _requestService = widget.requestRepository ?? RequestService();
 
-    _loadRequests();
+    _useCurrentLocation();
+  }
+
+  Future<void> _useCurrentLocation() async {
+    if (_locating) return;
+    setState(() {
+      _locating = true;
+      _locationMessage = null;
+    });
+    final location = await (widget.locationRepository ?? LocationService())
+        .getCurrentLocation();
+    if (!mounted) return;
+    setState(() {
+      _locating = false;
+      if (location.isAvailable) {
+        _usingCurrentLocation = true;
+      } else {
+        _locationMessage = _usingCurrentLocation
+            ? 'Location unavailable. Showing results near your last location.'
+            : 'Location unavailable. Showing ${_searchArea.name} as a fallback.';
+      }
+    });
+    await _loadRequests(
+      area: location.isAvailable
+          ? RequestArea(
+              'Current location',
+              location.latitude!,
+              location.longitude!,
+            )
+          : null,
+    );
   }
 
   /// Loads the first page of nearby requests.
@@ -134,17 +173,23 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _openCreateRequest() async {
     final created = await Navigator.of(context).push<HelpRequest>(
       MaterialPageRoute<HelpRequest>(
-        builder: (_) => RequestFormScreen(requestRepository: _requestService),
+        builder: (_) => RequestFormScreen(
+          requestRepository: _requestService,
+          nearbyArea: _usingCurrentLocation
+              ? RequestArea(
+                  'Nearby',
+                  (_searchArea.latitude * 100).round() / 100,
+                  (_searchArea.longitude * 100).round() / 100,
+                )
+              : null,
+        ),
       ),
     );
 
     if (!mounted) return;
 
     if (created != null) {
-      final area = requestAreas
-          .where((area) => area.name == created.area)
-          .firstOrNull;
-      await _loadRequests(area: area);
+      await _loadRequests();
 
       if (!mounted) return;
 
@@ -169,6 +214,47 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (mounted) {
       await _loadRequests();
+    }
+  }
+
+  void _showNearbyRequests() {
+    final section = _nearbySection.currentContext;
+    if (section != null) {
+      Scrollable.ensureVisible(
+        section,
+        duration: const Duration(milliseconds: 250),
+      );
+    }
+  }
+
+  Future<void> _openHelp() async {
+    final requestHelp = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.volunteer_activism_outlined),
+              title: const Text('Request Help'),
+              onTap: () => Navigator.pop(context, true),
+            ),
+            ListTile(
+              leading: const Icon(Icons.handshake_outlined),
+              title: const Text('Offer Help'),
+              subtitle: const Text('Browse nearby requests'),
+              onTap: () => Navigator.pop(context, false),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || requestHelp == null) return;
+    if (requestHelp) {
+      await _openCreateRequest();
+    } else {
+      _showNearbyRequests();
     }
   }
 
@@ -357,15 +443,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: Icons.handshake_outlined,
                       background: AppColors.sandBeige,
                       foreground: AppColors.charcoal,
-                      onTap: () {
-                        final section = _nearbySection.currentContext;
-                        if (section != null) {
-                          Scrollable.ensureVisible(
-                            section,
-                            duration: const Duration(milliseconds: 250),
-                          );
-                        }
-                      },
+                      onTap: _showNearbyRequests,
                     ),
                   ),
                 ],
@@ -393,28 +471,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: textTheme.bodyMedium,
               ),
               const SizedBox(height: 12),
-              InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Search area',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<RequestArea>(
-                    value: _searchArea,
-                    isExpanded: true,
-                    items: [
-                      for (final area in requestAreas)
-                        DropdownMenuItem(value: area, child: Text(area.name)),
-                    ],
-                    onChanged: (area) {
-                      if (area != null && area != _searchArea) {
-                        _loadRequests(area: area);
-                      }
-                    },
-                  ),
+              OutlinedButton.icon(
+                onPressed: _locating ? null : _useCurrentLocation,
+                icon: const Icon(Icons.my_location),
+                label: Text(
+                  _locating ? 'Finding location…' : 'Use my current location',
                 ),
               ),
+              if (_locationMessage != null) Text(_locationMessage!),
               const SizedBox(height: 16),
 
               const Wrap(
@@ -440,6 +504,16 @@ class _HomeScreenState extends State<HomeScreen> {
           if (index == 1) {
             Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const ResourceScreen()),
+            );
+          }
+
+          if (index == 2) _openHelp();
+
+          if (index == 3) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Events are coming in a future update.'),
+              ),
             );
           }
 

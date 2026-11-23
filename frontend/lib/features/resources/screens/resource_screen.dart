@@ -45,6 +45,7 @@ class _ResourceScreenState extends State<ResourceScreen> {
   int _generation = 0;
 
   static const _pageSize = 100;
+  static const _nearbyRadiusKm = 25.0;
 
   @override
   void initState() {
@@ -82,7 +83,7 @@ class _ResourceScreenState extends State<ResourceScreen> {
         area: _activeArea,
         latitude: _latitude,
         longitude: _longitude,
-        radiusKm: _latitude != null ? 10 : null,
+        radiusKm: _latitude != null ? _nearbyRadiusKm : null,
         limit: _pageSize,
         offset: append ? _resources.length : 0,
       );
@@ -312,6 +313,20 @@ class _ResourceScreenState extends State<ResourceScreen> {
     }
 
     if (_resources.isEmpty) {
+      if (_activeArea == null) {
+        return Column(
+          children: [
+            const Text('No resources found within 25 km of your location.'),
+            TextButton(
+              onPressed: () {
+                _areaController.text = 'Oklahoma City Metro';
+                _searchByArea();
+              },
+              child: const Text('Browse Oklahoma City Metro'),
+            ),
+          ],
+        );
+      }
       return const Padding(
         padding: EdgeInsets.all(24),
         child: Column(
@@ -446,7 +461,7 @@ class _ResourceScreenState extends State<ResourceScreen> {
               Text(
                 _activeArea != null
                     ? 'Showing resources in $_activeArea'
-                    : 'Showing resources within 10 km',
+                    : 'Showing resources within ${_nearbyRadiusKm.toInt()} km',
                 style: theme.textTheme.bodySmall,
               ),
 

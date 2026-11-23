@@ -1,8 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'profile_service.dart';
 import 'user_profile.dart';
+import 'volunteer_progress_card.dart';
 
 class ProfileScreen extends StatefulWidget {
   // Optional dependencies for automated testing.
@@ -22,6 +26,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _nameController = TextEditingController();
 
   UserProfile? _profile;
+  Future<VolunteerProgress?>? _volunteerProgress;
+  String? _featuredBadge;
+  Uint8List? _photo;
+  bool _updatingPhoto = false;
+  static const _maxPhotoBytes = 256 * 1024;
+
+  Future<void> _loadPhoto(String userId) async {
+    try {
+      final photo = await _service.getPhoto();
+      if (!mounted || _profile?.id != userId) return;
+      setState(() => _photo = photo);
+    } catch (_) {
+      // The photo can be retried separately from other profile settings.
+    }
+  }
+
+  Future<void> _updatePhoto({required bool remove}) async {
+    final userId = _profile?.id;
+    if (userId == null || _updatingPhoto) return;
+    setState(() => _updatingPhoto = true);
+    try {
+      Uint8List? photo;
+      if (remove) {
+        await _service.removePhoto();
+      } else {
+        final picked = await ImagePicker().pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 384,
+          maxHeight: 384,
+          imageQuality: 80,
+          requestFullMetadata: false,
+        );
+        if (picked == null || !mounted || _profile?.id != userId) return;
+        if (await picked.length() > _maxPhotoBytes) {
+          throw const FormatException('Choose a smaller photo.');
+        }
+        final bytes = await picked.readAsBytes();
+        if (bytes.isEmpty || bytes.length > _maxPhotoBytes) {
+          throw const FormatException('Choose a supported photo under 256 KB.');
+        }
+        if (!mounted || _profile?.id != userId) return;
+        photo = await _service.uploadPhoto(bytes);
+      }
+      if (!mounted || _profile?.id != userId) return;
+      setState(() => _photo = photo);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            remove ? 'Profile photo removed.' : 'Profile photo updated.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error is FormatException
+                  ? error.message
+                  : 'Could not update your photo. Try again.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _updatingPhoto = false);
+    }
+  }
 
   String? _error;
 
@@ -43,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// Retrieves the authenticated user's profile.
   Future<void> _loadProfile() async {
     // Prevent refresh from overwriting unsaved changes.
-    if (_editing || _saving || _signingOut) return;
+    if (_editing || _saving || _signingOut || _updatingPhoto) return;
 
     setState(() {
       _loading = true;
@@ -56,10 +128,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
 
       setState(() {
+        if (_profile?.id != profile.id) {
+          _featuredBadge = null;
+          _photo = null;
+        }
         _profile = profile;
+        _volunteerProgress = _service
+            .getVolunteerProgress()
+            .then<VolunteerProgress?>(
+              (progress) => progress,
+              onError: (Object _) => null,
+            );
         _nameController.text = profile.displayName;
         _editing = false;
       });
+      await _loadPhoto(profile.id);
     } catch (error) {
       if (!mounted) return;
 
@@ -153,7 +236,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// CCVO-70: Signs out of the authenticated session.
   Future<void> _signOut() async {
-    if (_signingOut || _saving || _loading) return;
+    if (_signingOut || _saving || _loading || _updatingPhoto) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -237,7 +320,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final theme = Theme.of(context);
 
     return PopScope(
-      canPop: !_saving && !_signingOut,
+      canPop: !_saving && !_signingOut && !_updatingPhoto,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Account Settings'),
@@ -260,12 +343,96 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: const EdgeInsets.all(24),
                   children: [
                     // Profile avatar.
-                    const Center(
-                      child: CircleAvatar(
-                        radius: 42,
-                        child: Icon(Icons.person_outline, size: 44),
-                      ),
+                    FutureBuilder<VolunteerProgress?>(
+                      future: _volunteerProgress,
+                      builder: (context, snapshot) {
+                        final badges =
+                            snapshot.data?.badgeLabels ?? const <String>[];
+                        final badge = badges.contains(_featuredBadge)
+                            ? _featuredBadge
+                            : badges.lastOrNull;
+                        final colors = theme.colorScheme;
+                        return Center(
+                          child: Semantics(
+                            label: badge == null
+                                ? 'Profile avatar'
+                                : 'Volunteer badge: $badge',
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: badge == null
+                                          ? Colors.transparent
+                                          : colors.primary,
+                                      width: 3,
+                                    ),
+                                  ),
+                                  child: CircleAvatar(
+                                    radius: 42,
+                                    foregroundImage: _photo == null
+                                        ? null
+                                        : MemoryImage(_photo!),
+                                    onForegroundImageError: _photo == null
+                                        ? null
+                                        : (_, _) {},
+                                    child: const Icon(
+                                      Icons.person_outline,
+                                      size: 44,
+                                    ),
+                                  ),
+                                ),
+                                if (badge != null)
+                                  Positioned(
+                                    right: 0,
+                                    bottom: 0,
+                                    child: CircleAvatar(
+                                      radius: 15,
+                                      backgroundColor: colors.primary,
+                                      foregroundColor: colors.onPrimary,
+                                      child: const Icon(
+                                        Icons.workspace_premium,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
+                    if (profile != null)
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        children: [
+                          TextButton(
+                            onPressed: _updatingPhoto || _signingOut
+                                ? null
+                                : () => _updatePhoto(remove: false),
+                            child: Text(
+                              _photo == null ? 'Upload photo' : 'Change photo',
+                            ),
+                          ),
+                          if (_photo != null)
+                            TextButton(
+                              onPressed: _updatingPhoto || _signingOut
+                                  ? null
+                                  : () => _updatePhoto(remove: true),
+                              child: const Text('Remove photo'),
+                            ),
+                        ],
+                      ),
+                    if (profile != null)
+                      Text(
+                        'Your photo appears on your member card in offers and chats.',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall,
+                      ),
 
                     const SizedBox(height: 24),
 
@@ -356,6 +523,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         leading: const Icon(Icons.info_outline),
                         title: const Text('Account Status'),
                         subtitle: Text(profile.status),
+                      ),
+                      FutureBuilder<VolunteerProgress?>(
+                        future: _volunteerProgress,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const ListTile(
+                              title: Text('Loading volunteer progress…'),
+                            );
+                          }
+                          final progress = snapshot.data;
+                          if (snapshot.hasError || progress == null) {
+                            return const ListTile(
+                              title: Text('Volunteer progress unavailable'),
+                            );
+                          }
+                          return VolunteerProgressCard(
+                            progress: progress,
+                            featuredBadge: _featuredBadge,
+                            onBadgeSelected: (badge) =>
+                                setState(() => _featuredBadge = badge),
+                          );
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.badge_outlined),
+                        title: const Text('Identity verification'),
+                        subtitle: Text(switch (_service.isEmailConfirmed) {
+                          true => 'Email confirmed. Government ID verification is unavailable.',
+                          false => 'Email confirmation pending. Government ID verification is unavailable.',
+                          null => 'Government ID verification is unavailable.',
+                        }),
                       ),
 
                       const SizedBox(height: 24),
